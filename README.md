@@ -372,6 +372,7 @@ const customArtifacts = renderArtifacts(ast, { format: 'fixture' });
 |----------|-------------|
 | **[CONTRIBUTING.md](./CONTRIBUTING.md)** | Contribution guidelines |
 | **[TESTING.md](./TESTING.md)** | Testing strategy and guidelines |
+| **[CONFORMANCE TEST PLAN](./tests/conformance/CONFORMANCE_TEST_PLAN.md)** | Why conformance tests exist and how they are enforced |
 | **[CODE_OF_CONDUCT.md](./CODE_OF_CONDUCT.md)** | Community guidelines |
 | **[SECURITY.md](./SECURITY.md)** | Security policy |
 
