@@ -30,6 +30,9 @@ export interface CLIOptions {
   watch?: boolean;
   serve?: number;
   pretty?: boolean;
+  showAnnotations?: boolean;
+  resolvePlaceholders?: boolean;
+  placeholderSeed?: string | number;
   watchPattern?: string;
   ignorePattern?: string;
   plugins?: string[];
@@ -63,6 +66,9 @@ OPTIONS:
   -p, --pretty                 Pretty print output (default: true)
   -h, --help                   Show this help message
   -v, --version                Show version number
+  --show-annotations         Render visual annotation notes/comments in HTML output
+  --seed <value>             Seed for deterministic placeholder data generation
+  --no-placeholders          Keep {{...}} placeholders as literal text in output
 
 EXAMPLES:
   wiremd wireframe.md
@@ -71,6 +77,12 @@ EXAMPLES:
   wiremd wireframe.md --format angular --output-dir ./generated
   wiremd wireframe.md --plugin ./my-plugin.mjs --format custom
   wiremd --list-renderers
+
+  # Deterministic placeholders
+  wiremd wireframe.md --seed demo-123
+
+  # Keep placeholders unresolved
+  wiremd wireframe.md --no-placeholders
 
 STYLES:
   sketch     - Balsamiq-inspired hand-drawn look (default)
@@ -103,6 +115,7 @@ export function parseArgs(args: string[]): CLIOptions | null {
     format: 'html',
     style: 'sketch',
     pretty: true,
+    resolvePlaceholders: true,
   };
 
   for (let index = 0; index < args.length; index++) {
@@ -186,6 +199,26 @@ export function parseArgs(args: string[]): CLIOptions | null {
         options.ignorePattern = args[++index];
         break;
 
+      case '--show-annotations':
+        options.showAnnotations = true;
+        break;
+
+      case '--seed': {
+        const seedValue = args[++index];
+        if (seedValue === undefined) {
+          console.error('Error: --seed requires a value');
+          process.exit(1);
+        }
+        options.placeholderSeed = /^-?\d+$/.test(seedValue)
+          ? Number.parseInt(seedValue, 10)
+          : seedValue;
+        break;
+      }
+
+      case '--no-placeholders':
+        options.resolvePlaceholders = false;
+        break;
+
       case '-p':
       case '--pretty':
         options.pretty = true;
@@ -240,7 +273,16 @@ export function generateArtifacts(
   options: CLIOptions,
   registry: PluginRegistry = createPluginRegistry(),
 ) {
-  const { input, format, style, pretty, rendererOptions } = options;
+  const {
+    input,
+    format,
+    style,
+    pretty,
+    showAnnotations,
+    resolvePlaceholders,
+    placeholderSeed,
+    rendererOptions,
+  } = options;
 
   if (!existsSync(input)) {
     throw new Error(`File not found: ${input}`);
@@ -254,6 +296,9 @@ export function generateArtifacts(
     format,
     style,
     pretty,
+    showAnnotations,
+    resolvePlaceholders,
+    placeholderSeed,
     rendererOptions,
   };
 

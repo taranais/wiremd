@@ -8,6 +8,7 @@ import type {
   TransformerReference,
   WiremdPlugin,
 } from '../types.js';
+import { resolveNodePlaceholders } from '../placeholders/index.js';
 import { createRenderHelpers } from './plugin-utils.js';
 import { getBuiltinPlugins } from './builtin-plugins.js';
 
@@ -81,7 +82,13 @@ export function createPluginRegistry(): PluginRegistry {
     renderArtifacts(ast, options = {}) {
       const helpers = createRenderHelpers();
       const clonedAst = structuredClone(ast) as DocumentNode;
-      const transformedAst = applyTransformers(clonedAst, options.transformers || [], helpers);
+      const renderableAst = options.resolvePlaceholders === false
+        ? clonedAst
+        : resolveNodePlaceholders(clonedAst, {
+          seed: options.placeholderSeed,
+          preserveUnknown: true,
+        });
+      const transformedAst = applyTransformers(renderableAst, options.transformers || [], helpers);
       const format = options.format || 'html';
       const renderer = registry.getRenderer(format);
 

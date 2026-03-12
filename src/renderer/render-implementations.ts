@@ -14,6 +14,7 @@ export function renderHTMLDocument(
     inlineStyles = true,
     pretty = true,
     classPrefix = 'wmd-',
+    showAnnotations = false,
   } = options;
 
   const helpers = createRenderHelpers();
@@ -23,6 +24,7 @@ export function renderHTMLDocument(
     inlineStyles,
     pretty,
     nextId: helpers.nextId,
+    showAnnotations,
   };
 
   const childrenHTML = ast.children.map((child) => renderHTMLNode(child, context)).join('\n');
@@ -60,6 +62,7 @@ export function renderReactComponentDocument(
     classPrefix = 'wmd-',
     typescript = true,
     componentName = 'WiremdComponent',
+    showAnnotations = false,
   } = options;
 
   const helpers = createRenderHelpers();
@@ -69,6 +72,7 @@ export function renderReactComponentDocument(
     useClassName: true,
     componentName,
     nextId: helpers.nextId,
+    showAnnotations,
   };
 
   const childrenJSX = ast.children.map((child) => renderReactNode(child, context, 1)).join('\n');
@@ -90,11 +94,12 @@ export function renderTailwindDocument(
   ast: DocumentNode,
   options: RenderOptions = {},
 ): RenderResult {
-  const { pretty = true } = options;
+  const { pretty = true, showAnnotations = false } = options;
   const helpers = createRenderHelpers();
   const context = {
     pretty,
     nextId: helpers.nextId,
+    showAnnotations,
   };
 
   const childrenHTML = ast.children.map((child) => renderTailwindNode(child, context)).join('\n  ');

@@ -20,3 +20,6 @@ export * from './parser/index.js';
 
 // Export renderer
 export * from './renderer/index.js';
+
+// Export placeholders
+export * from './placeholders/index.js';
