@@ -8,7 +8,7 @@ import { join } from 'path';
 import { main } from '../src/cli/index.js';
 
 describe('CLI', () => {
-  const TEST_DIR = './test-temp-cli';
+  const TEST_DIR = './tests/.artifacts/cli';
   const TEST_INPUT = join(TEST_DIR, 'input.md');
   const TEST_OUTPUT = join(TEST_DIR, 'output.html');
   const PLUGIN_FIXTURE = './tests/fixtures/test-cli-plugin.mjs';

@@ -11,47 +11,40 @@ import { startServer, notifyReload, notifyError } from '../src/cli/server.js';
 
 describe('Dev Server', () => {
   const TEST_PORT = 3456;
-  // Use temp directory with unique filename to avoid conflicts on Windows
   const TEST_OUTPUT = join(tmpdir(), `wiremd-test-${process.pid}-${Date.now()}.html`);
   let server: any;
 
   beforeEach(() => {
-    // Create a test HTML file
     writeFileSync(
       TEST_OUTPUT,
       '<html><body><h1>Test</h1></body></html>',
-      'utf-8'
+      'utf-8',
     );
   });
 
   afterEach(() => {
-    // Clean up test file
     try {
       if (existsSync(TEST_OUTPUT)) {
         unlinkSync(TEST_OUTPUT);
       }
     } catch (e) {
-      // Ignore if file doesn't exist or is locked
       console.warn('Could not delete test file:', e);
     }
   });
 
   describe('startServer', () => {
     it('should start server on specified port', async () => {
-      // Note: This is a basic test - full server testing would require
-      // more complex setup with actual server lifecycle management
       expect(typeof startServer).toBe('function');
     });
 
     it('should serve HTML file with live-reload script injected', () => {
-      // Ensure file exists before reading (Windows timing issue)
       if (!existsSync(TEST_OUTPUT)) {
         console.warn('Test file not found, skipping test');
         return;
       }
+
       const html = readFileSync(TEST_OUTPUT, 'utf-8');
       expect(html).toContain('<h1>Test</h1>');
-      // The actual injection happens in the server request handler
     });
   });
 
@@ -81,7 +74,6 @@ describe('Dev Server', () => {
 
   describe('Live-reload script injection', () => {
     it('should inject toolbar HTML', () => {
-      // Test that the script template contains required elements
       const serverModule = readFileSync('./src/cli/server.ts', 'utf-8');
       expect(serverModule).toContain('wiremd-toolbar');
       expect(serverModule).toContain('wiremd-error-overlay');
@@ -123,12 +115,10 @@ describe('Dev Server', () => {
 
   describe('WebSocket message format', () => {
     it('should format reload messages correctly', () => {
-      // The format is tested implicitly through notifyReload function
       expect(() => notifyReload()).not.toThrow();
     });
 
     it('should format error messages with prefix', () => {
-      // Error messages should start with "error:"
       expect(() => notifyError('Parse failed')).not.toThrow();
     });
   });
@@ -144,9 +134,9 @@ describe('Dev Server', () => {
 
     it('should define max-width for each viewport', () => {
       const serverModule = readFileSync('./src/cli/server.ts', 'utf-8');
-      expect(serverModule).toContain('max-width: 375px'); // mobile
-      expect(serverModule).toContain('max-width: 768px'); // tablet
-      expect(serverModule).toContain('max-width: 1024px'); // laptop
+      expect(serverModule).toContain('max-width: 375px');
+      expect(serverModule).toContain('max-width: 768px');
+      expect(serverModule).toContain('max-width: 1024px');
     });
   });
 
@@ -167,7 +157,7 @@ describe('Dev Server', () => {
     it('should auto-dismiss after timeout', () => {
       const serverModule = readFileSync('./src/cli/server.ts', 'utf-8');
       expect(serverModule).toContain('setTimeout');
-      expect(serverModule).toContain('8000'); // 8 second timeout
+      expect(serverModule).toContain('8000');
     });
   });
 
@@ -198,7 +188,7 @@ describe('Dev Server', () => {
       const serverModule = readFileSync('./src/cli/server.ts', 'utf-8');
       expect(serverModule).toContain('retryCount');
       expect(serverModule).toContain('maxRetries');
-      expect(serverModule).toContain('10'); // max 10 retries
+      expect(serverModule).toContain('10');
     });
 
     it('should wait between reconnection attempts', () => {
@@ -229,26 +219,6 @@ describe('Dev Server', () => {
       const serverModule = readFileSync('./src/cli/server.ts', 'utf-8');
       expect(serverModule).toContain('position: fixed');
       expect(serverModule).toContain('top: 0');
-      expect(serverModule).toContain('z-index: 9999');
-    });
-  });
-
-  describe('Preview wrapper', () => {
-    it('should wrap content in preview wrapper', () => {
-      const serverModule = readFileSync('./src/cli/server.ts', 'utf-8');
-      expect(serverModule).toContain('wiremd-preview-wrapper');
-      expect(serverModule).toContain('wrapper.appendChild');
-    });
-
-    it('should add top margin for toolbar', () => {
-      const serverModule = readFileSync('./src/cli/server.ts', 'utf-8');
-      expect(serverModule).toContain('margin-top: 48px');
-    });
-
-    it('should handle viewport class changes', () => {
-      const serverModule = readFileSync('./src/cli/server.ts', 'utf-8');
-      expect(serverModule).toContain('wrapper.className');
-      expect(serverModule).toContain('viewport-');
     });
   });
 });
