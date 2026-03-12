@@ -189,7 +189,8 @@ export type TransformerReference =
 
 export interface RenderOptions {
   format?: string;
-  style?: 'sketch' | 'clean' | 'wireframe' | 'none' | 'tailwind' | 'material' | 'brutal';
+  style?: 'sketch' | 'clean' | 'wireframe' | 'none' | 'tailwind' | 'material' | 'brutal' | 'dark';
+  style?: 'sketch' | 'clean' | 'wireframe' | 'none' | 'tailwind' | 'material' | 'brutal' | 'dark';
   inlineStyles?: boolean;
   pretty?: boolean;
   classPrefix?: string;

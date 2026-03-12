@@ -18,7 +18,7 @@ import {
 import type { PluginRegistry, RenderArtifact, RenderOptions, WiremdPlugin } from '../types.js';
 import { startServer, notifyError, notifyReload } from './server.js';
 
-type StyleOption = 'sketch' | 'clean' | 'wireframe' | 'none' | 'tailwind' | 'material' | 'brutal';
+type StyleOption = 'sketch' | 'clean' | 'wireframe' | 'none' | 'tailwind' | 'material' | 'brutal' | 'dark';
 type CLIRegistry = typeof defaultPluginRegistry;
 
 export interface CLIOptions {
@@ -52,7 +52,7 @@ OPTIONS:
   -o, --output <file>          Output file path for single-file renderers
   --output-dir <dir>           Output directory for multi-file renderers
   -f, --format <format>        Output format: html, json, react, tailwind, vue, svelte, angular
-  -s, --style <style>          Visual style: sketch, clean, wireframe, none, tailwind, material, brutal
+  -s, --style <style>          Visual style: sketch, clean, wireframe, none, tailwind, material, brutal, dark
   --plugin <path|specifier>    Load an external renderer plugin (repeatable)
   --renderer-option <k=v>      Pass plugin-specific renderer options (repeatable)
   --list-renderers             List available renderers
@@ -80,6 +80,7 @@ STYLES:
   tailwind   - Modern utility-first design with purple accents
   material   - Google Material Design with elevation system
   brutal     - Neo-brutalism with bold colors and thick borders
+  dark       - Professional dark theme for modern apps
 
 For more information: https://github.com/akonan/wiremd
 `);
@@ -156,8 +157,8 @@ export function parseArgs(args: string[]): CLIOptions | null {
       case '-s':
       case '--style': {
         const style = args[++index];
-        if (!['sketch', 'clean', 'wireframe', 'none', 'tailwind', 'material', 'brutal'].includes(style)) {
-          console.error(`Error: Invalid style "${style}". Must be sketch, clean, wireframe, none, tailwind, material, or brutal.`);
+        if (!['sketch', 'clean', 'wireframe', 'none', 'tailwind', 'material', 'brutal', 'dark'].includes(style)) {
+          console.error(`Error: Invalid style "${style}". Must be sketch, clean, wireframe, none, tailwind, material, brutal, or dark.`);
           process.exit(1);
         }
         options.style = style as StyleOption;
