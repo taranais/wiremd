@@ -148,6 +148,30 @@ describe('React Renderer', () => {
       expect(jsx).toContain('<h3');
       expect(jsx).toContain('Feature');
     });
+
+    it('should render loading, empty, and error state containers', () => {
+      const ast = parse(`
+::: loading
+Sync in progress
+:::
+
+::: empty-state
+No results
+:::
+
+::: error-state
+Try again later
+:::
+      `.trim());
+      const jsx = renderToReact(ast);
+
+      expect(jsx).toContain('wmd-container-loading-state');
+      expect(jsx).toContain('Sync in progress');
+      expect(jsx).toContain('wmd-container-empty-state');
+      expect(jsx).toContain('No results');
+      expect(jsx).toContain('wmd-container-error-state');
+      expect(jsx).toContain('Try again later');
+    });
   });
 
   describe('Navigation', () => {

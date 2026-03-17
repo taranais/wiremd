@@ -141,6 +141,18 @@ export function renderNode(node: WiremdNode, context: RenderContext): string {
       rendered = renderSeparator(node, context);
       break;
 
+    case 'loading-state':
+      rendered = renderStateBlock(node, context, 'loading-state', node.message || 'Loading...', 'clock');
+      break;
+
+    case 'empty-state':
+      rendered = renderStateBlock(node, context, 'empty-state', node.title || 'Empty state', node.icon);
+      break;
+
+    case 'error-state':
+      rendered = renderStateBlock(node, context, 'error-state', node.title || 'Error state', node.icon);
+      break;
+
     default:
       rendered = `<!-- Unknown node type: ${(node as any).type} -->`;
       break;
@@ -640,30 +652,48 @@ function renderSeparator(node: any, context: RenderContext): string {
   return `<hr class="${classes}" />`;
 }
 
+function renderStateBlock(
+  node: any,
+  context: RenderContext,
+  kind: 'loading-state' | 'empty-state' | 'error-state',
+  title: string,
+  iconName?: string,
+): string {
+  const { classPrefix: prefix } = context;
+  const classes = buildClasses(prefix, `container-${kind}`, node.props || {});
+  const iconMarkup = iconName ? renderIcon({ props: { name: iconName } }, context) : '';
+  const children = (node.children || []).map((child: any) => renderNode(child, context)).filter(Boolean).join('\n');
+  return `<div class="${classes}">
+  <strong>${iconMarkup}${escapeHtml(title)}</strong>
+  ${children ? `${children}\n` : ''}</div>`;
+}
+
 /**
  * Build CSS classes string from prefix, base class, and props
  */
 function buildClasses(prefix: string, baseClass: string, props: any): string {
-  const classes = [`${prefix}${baseClass}`];
+  const classes = new Set<string>([`${prefix}${baseClass}`]);
 
   // Add custom classes
   if (props.classes && Array.isArray(props.classes)) {
     props.classes.forEach((cls: string) => {
-      classes.push(`${prefix}${cls}`);
+      if (!shouldSkipPrefixedClass(baseClass, cls)) {
+        classes.add(`${prefix}${cls}`);
+      }
     });
   }
 
   // Add variant class
   if (props.variant) {
-    classes.push(`${prefix}${baseClass}-${props.variant}`);
+    classes.add(`${prefix}${baseClass}-${props.variant}`);
   }
 
   const states = getStates(props);
   states.forEach((state) => {
-    classes.push(`${prefix}state-${state}`);
+    classes.add(`${prefix}state-${state}`);
   });
 
-  return classes.join(' ');
+  return Array.from(classes).join(' ');
 }
 
 function getStates(props: any): string[] {
@@ -705,6 +735,16 @@ function buildResponsiveGridClasses(prefix: string, gridColumns?: Record<string,
   });
 
   return classes.join(' ');
+}
+
+function shouldSkipPrefixedClass(baseClass: string, className: string): boolean {
+  const normalizedClass = className.trim();
+
+  if (baseClass !== 'grid') {
+    return false;
+  }
+
+  return /^grid-\d+$/.test(normalizedClass) || /^(xs|sm|md|lg|xl|2xl):grid-\d+$/.test(normalizedClass);
 }
 
 function appendAnnotationMarkup(rendered: string, node: WiremdNode, context: RenderContext): string {

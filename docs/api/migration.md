@@ -41,7 +41,7 @@ Or in code:
 import { parse } from 'wiremd';
 
 const ast = parse(markdown);
-console.log('Syntax version:', ast.version); // '0.1'
+console.log('Syntax version:', ast.version); // '0.2'
 ```
 
 ### 2. Use TypeScript
@@ -212,7 +212,7 @@ Core type definitions are stable:
 import { VERSION, SYNTAX_VERSION } from 'wiremd';
 
 console.log('wiremd version:', VERSION); // '0.1.0'
-console.log('Syntax version:', SYNTAX_VERSION); // '0.1'
+console.log('Syntax version:', SYNTAX_VERSION); // '0.2'
 
 function checkCompatibility() {
   const [major, minor] = VERSION.split('.').map(Number);

@@ -1,337 +1,232 @@
-/**
- * Integration tests for live-reload functionality
- */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'fs';
+import { dirname, join } from 'path';
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { readFileSync } from 'fs';
+const integrationMocks = vi.hoisted(() => {
+  const state = {
+    handlers: new Map<string, (path: string) => void>(),
+    watchPaths: [] as string[],
+    watchOptions: undefined as Record<string, unknown> | undefined,
+    watcher: null as {
+      on: ReturnType<typeof vi.fn>;
+      close: ReturnType<typeof vi.fn>;
+    } | null,
+  };
+
+  const createWatcher = () => {
+    state.handlers = new Map();
+    const watcher = {
+      on: vi.fn((event: string, handler: (path: string) => void) => {
+        state.handlers.set(event, handler);
+        return watcher;
+      }),
+      close: vi.fn(() => Promise.resolve()),
+    };
+    state.watcher = watcher;
+    return watcher;
+  };
+
+  return {
+    state,
+    reset() {
+      state.handlers = new Map();
+      state.watchPaths = [];
+      state.watchOptions = undefined;
+      state.watcher = null;
+    },
+    chokidarWatch: vi.fn((paths: string[], options: Record<string, unknown>) => {
+      state.watchPaths = [...paths];
+      state.watchOptions = options;
+      return createWatcher();
+    }),
+    startServer: vi.fn(),
+    notifyReload: vi.fn(),
+    notifyError: vi.fn(),
+  };
+});
+
+vi.mock('chokidar', () => ({
+  default: {
+    watch: integrationMocks.chokidarWatch,
+  },
+}));
+
+vi.mock('../src/cli/server.js', () => ({
+  startServer: integrationMocks.startServer,
+  notifyReload: integrationMocks.notifyReload,
+  notifyError: integrationMocks.notifyError,
+}));
+
+import { main } from '../src/cli/index.js';
 
 describe('Live Preview Integration', () => {
-  describe('CLI and Server Integration', () => {
-    it('should have notifyError exported from server', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-      expect(serverSource).toContain('export function notifyError');
-    });
+  const TEST_DIR = './tests/.artifacts/integration';
+  const TEST_INPUT = join(TEST_DIR, 'input.md');
+  const TEST_OUTPUT = join(TEST_DIR, 'output.html');
+  const DEFAULT_OUTPUT = join(TEST_DIR, 'input.html');
 
-    it('should have notifyReload exported from server', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-      expect(serverSource).toContain('export function notifyReload');
-    });
+  beforeEach(() => {
+    integrationMocks.reset();
+    integrationMocks.startServer.mockReset();
+    integrationMocks.notifyReload.mockReset();
+    integrationMocks.notifyError.mockReset();
 
-    it('should import server functions in CLI', () => {
-      const cliSource = readFileSync('./src/cli/index.ts', 'utf-8');
-      expect(cliSource).toContain("import");
-      expect(cliSource).toContain("notifyReload");
-      expect(cliSource).toContain("notifyError");
-      expect(cliSource).toContain("from './server.js'");
-    });
-
-    it('should use both server functions in watch mode', () => {
-      const cliSource = readFileSync('./src/cli/index.ts', 'utf-8');
-      expect(cliSource).toContain('notifyReload()');
-      expect(cliSource).toContain('notifyError(');
-    });
+    mkdirSync(TEST_DIR, { recursive: true });
+    writeFileSync(TEST_INPUT, '# Integration Test\n\n[Submit]*\n', 'utf-8');
   });
 
-  describe('Live Reload Flow', () => {
-    it('should have complete reload flow: file change -> regenerate -> notify', () => {
-      const cliSource = readFileSync('./src/cli/index.ts', 'utf-8');
-
-      // Check for file watching
-      expect(cliSource).toContain('chokidar');
-
-      // Check for regeneration
-      expect(cliSource).toContain('generateOutput');
-      expect(cliSource).toContain('writeFileSync');
-
-      // Check for notification
-      expect(cliSource).toContain('notifyReload');
-    });
-
-    it('should have error flow: file change -> parse error -> notify error', () => {
-      const cliSource = readFileSync('./src/cli/index.ts', 'utf-8');
-
-      // Check for error catching
-      expect(cliSource).toContain('catch');
-
-      // Check for error notification
-      expect(cliSource).toContain('notifyError');
-    });
-
-    it('should only trigger notifications when server is active', () => {
-      const cliSource = readFileSync('./src/cli/index.ts', 'utf-8');
-
-      // Both notifications should check for serve option
-      const reloadSection = cliSource.match(/if \(options\.serve\)[\s\S]*?notifyReload/);
-      const errorSection = cliSource.match(/if \(options\.serve\)[\s\S]*?notifyError/);
-
-      expect(reloadSection).toBeTruthy();
-      expect(errorSection).toBeTruthy();
-    });
+  afterEach(() => {
+    rmSync(TEST_DIR, { recursive: true, force: true });
   });
 
-  describe('WebSocket Communication', () => {
-    it('should send reload message in correct format', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
+  describe('CLI watch/serve behavior', () => {
+    it('starts the dev server and watcher from the real CLI flow', async () => {
+      const result = await runMain([TEST_INPUT, '--watch', '--serve', '3000', '-o', TEST_OUTPUT]);
 
-      // Check sendMessageToClients implementation
-      expect(serverSource).toContain('sendMessageToClients');
-      expect(serverSource).toContain('Buffer.alloc');
-      expect(serverSource).toContain('0x81'); // WebSocket FIN + text frame
-    });
-
-    it('should prefix error messages correctly', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      // Check error message formatting
-      expect(serverSource).toContain('error:${errorMessage}');
-    });
-
-    it('should handle client disconnections gracefully', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      // Check error handling in message sending
-      expect(serverSource).toContain('catch');
-      expect(serverSource).toContain('wsClients.delete');
-    });
-  });
-
-  describe('Client-side WebSocket Handling', () => {
-    it('should handle reload messages', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain("data === 'reload'");
-      expect(serverSource).toContain('window.location.reload');
-    });
-
-    it('should handle error messages', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain("data.startsWith('error:')");
-      expect(serverSource).toContain('showError');
-    });
-
-    it('should show reload indicator before reload', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('reloadIndicator.classList.add');
-      expect(serverSource).toContain('setTimeout');
-      expect(serverSource).toContain('window.location.reload');
-    });
-  });
-
-  describe('UI Components Integration', () => {
-    it('should inject all UI components in correct order', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      // Check for style block first
-      const styleIndex = serverSource.indexOf('<style>');
-
-      // Check for toolbar
-      const toolbarIndex = serverSource.indexOf('wiremd-toolbar');
-
-      // Check for error overlay
-      const errorIndex = serverSource.indexOf('wiremd-error-overlay');
-
-      // Check for reload indicator
-      const reloadIndex = serverSource.indexOf('wiremd-reload-indicator');
-
-      // Check for script
-      const scriptIndex = serverSource.indexOf('<script>');
-
-      // Verify order
-      expect(styleIndex).toBeLessThan(toolbarIndex);
-      expect(toolbarIndex).toBeLessThan(errorIndex);
-      expect(errorIndex).toBeLessThan(reloadIndex);
-      expect(reloadIndex).toBeLessThan(scriptIndex);
-    });
-
-    it('should properly wrap content in preview wrapper', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('wiremd-preview-wrapper');
-      expect(serverSource).toContain('wrapper.appendChild(body.firstChild)');
-      expect(serverSource).toContain('body.appendChild(wrapper)');
-    });
-
-    it('should exclude UI elements from wrapper', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain("id !== 'wiremd-toolbar'");
-      expect(serverSource).toContain("id !== 'wiremd-error-overlay'");
-      expect(serverSource).toContain("id !== 'wiremd-reload-indicator'");
-    });
-  });
-
-  describe('Viewport Switcher Integration', () => {
-    it('should handle viewport button clicks', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('.viewport-btn');
-      expect(serverSource).toContain('addEventListener');
-      expect(serverSource).toContain('data-viewport');
-      expect(serverSource).toContain('wrapper.className');
-    });
-
-    it('should update active state on viewport change', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('classList.remove');
-      expect(serverSource).toContain('classList.add');
-      expect(serverSource).toContain('active');
-    });
-
-    it('should apply viewport class to wrapper', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain("'viewport-' + viewport");
-    });
-  });
-
-  describe('Connection Status Integration', () => {
-    it('should update status on connection open', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('ws.onopen');
-      expect(serverSource).toContain('updateStatus(true)');
-    });
-
-    it('should update status on connection close', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('ws.onclose');
-      expect(serverSource).toContain('updateStatus(false)');
-    });
-
-    it('should attempt reconnection on close', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('retryCount < maxRetries');
-      expect(serverSource).toContain('setTimeout(connect, 1000)');
-    });
-
-    it('should show error after max retries', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('retryCount < maxRetries');
-      expect(serverSource).toContain('Lost connection to dev server');
-    });
-  });
-
-  describe('Error Overlay Integration', () => {
-    it('should show error overlay with message', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('function showError');
-      expect(serverSource).toContain('errorMessage.textContent');
-      expect(serverSource).toContain("classList.add('show')");
-    });
-
-    it('should auto-dismiss error overlay', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('setTimeout');
-      expect(serverSource).toContain("classList.remove('show')");
-      expect(serverSource).toContain('8000');
-    });
-
-    it('should support manual close', () => {
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-
-      expect(serverSource).toContain('close-btn');
-      expect(serverSource).toContain('onclick');
-      expect(serverSource).toContain("classList.remove('show')");
-    });
-  });
-
-  describe('TypeScript Configuration', () => {
-    it('should include DOM lib for browser APIs', () => {
-      const tsconfig = readFileSync('./tsconfig.json', 'utf-8');
-      const config = JSON.parse(tsconfig);
-
-      expect(config.compilerOptions.lib).toContain('DOM');
-    });
-
-    it('should include node types', () => {
-      const tsconfig = readFileSync('./tsconfig.json', 'utf-8');
-      const config = JSON.parse(tsconfig);
-
-      expect(config.compilerOptions.types).toContain('node');
-    });
-
-    it('should exclude vscode-extension from main build', () => {
-      const tsconfig = readFileSync('./tsconfig.json', 'utf-8');
-      const config = JSON.parse(tsconfig);
-
-      expect(config.exclude).toContain('vscode-extension');
-    });
-  });
-
-  describe('Documentation', () => {
-    it('should have live preview guide', () => {
-      const guide = readFileSync('./.github/dev-docs/LIVE_PREVIEW_GUIDE.md', 'utf-8');
-
-      expect(guide).toContain('Live Preview');
-      expect(guide).toContain('CLI');
-      expect(guide).toContain('VS Code');
-    });
-
-    it('should document viewport switcher', () => {
-      const guide = readFileSync('./.github/dev-docs/LIVE_PREVIEW_GUIDE.md', 'utf-8');
-
-      expect(guide).toContain('viewport');
-      expect(guide).toContain('mobile');
-      expect(guide).toContain('tablet');
-      expect(guide).toContain('laptop');
-    });
-
-    it('should document error overlay', () => {
-      const guide = readFileSync('./.github/dev-docs/LIVE_PREVIEW_GUIDE.md', 'utf-8');
-
-      expect(guide).toContain('error');
-      expect(guide).toContain('overlay');
-    });
-
-    it('should document troubleshooting', () => {
-      const guide = readFileSync('./.github/dev-docs/LIVE_PREVIEW_GUIDE.md', 'utf-8');
-
-      expect(guide).toContain('Troubleshooting');
-    });
-  });
-
-  describe('Package Configuration', () => {
-    it('should have @types/node dependency', () => {
-      const pkg = readFileSync('./package.json', 'utf-8');
-      const config = JSON.parse(pkg);
-
-      expect(config.devDependencies).toHaveProperty('@types/node');
-    });
-  });
-
-  describe('Complete Feature Coverage', () => {
-    it('should implement all advertised features', () => {
-      const guide = readFileSync('./.github/dev-docs/LIVE_PREVIEW_GUIDE.md', 'utf-8');
-      const serverSource = readFileSync('./src/cli/server.ts', 'utf-8');
-      const cliSource = readFileSync('./src/cli/index.ts', 'utf-8');
-
-      // Features mentioned in guide should exist in code
-      const features = [
-        { name: 'toolbar', code: 'wiremd-toolbar' },
-        { name: 'viewport', code: 'viewport-btn' },
-        { name: 'error overlay', code: 'wiremd-error-overlay' },
-        { name: 'connection status', code: 'status' },
-        { name: 'live-reload', code: 'reload' },
-      ];
-
-      features.forEach((feature) => {
-        // Feature should be mentioned in guide
-        expect(guide.toLowerCase()).toContain(feature.name.toLowerCase());
-
-        // Feature should exist in code (either server or cli)
-        const inCode =
-          serverSource.includes(feature.code) ||
-          cliSource.includes(feature.code);
-        expect(inCode).toBe(true);
+      expect(result.exitCode).toBeNull();
+      expect(existsSync(TEST_OUTPUT)).toBe(true);
+      expect(integrationMocks.startServer).toHaveBeenCalledWith({
+        port: 3000,
+        outputPath: TEST_OUTPUT,
       });
+      expect(integrationMocks.state.watchPaths).toEqual([
+        TEST_INPUT,
+        join(dirname(TEST_INPUT), '**/*.md'),
+      ]);
+      expect(integrationMocks.state.watchOptions).toEqual(expect.objectContaining({
+        persistent: true,
+        ignoreInitial: true,
+      }));
+    });
+
+    it('uses custom watch and ignore patterns through chokidar', async () => {
+      const result = await runMain([
+        TEST_INPUT,
+        '--watch',
+        '--watch-pattern',
+        'docs/**/*.md',
+        '--ignore',
+        '**/*.tmp',
+        '-o',
+        TEST_OUTPUT,
+      ]);
+
+      expect(result.exitCode).toBeNull();
+      expect(integrationMocks.state.watchPaths).toEqual(['docs/**/*.md']);
+      expect(integrationMocks.state.watchOptions).toEqual(expect.objectContaining({
+        ignored: expect.arrayContaining([
+          '**/node_modules/**',
+          '**/.git/**',
+          '**/dist/**',
+          '**/build/**',
+          '**/*.tmp',
+        ]),
+      }));
+    });
+
+    it('regenerates output and notifies reload on watched changes when serve is enabled', async () => {
+      const result = await runMain([TEST_INPUT, '--watch', '--serve', '3000', '-o', TEST_OUTPUT]);
+
+      expect(result.exitCode).toBeNull();
+      writeFileSync(TEST_INPUT, '# Changed\n\n[Save]*\n', 'utf-8');
+
+      await triggerWatchEvent('change', TEST_INPUT);
+
+      expect(integrationMocks.notifyReload).toHaveBeenCalledTimes(1);
+      expect(readFileSync(TEST_OUTPUT, 'utf-8')).toContain('Changed');
+      expect(readFileSync(TEST_OUTPUT, 'utf-8')).toContain('Save');
+    });
+
+    it('notifies render errors on watched changes when regeneration fails under serve', async () => {
+      const result = await runMain([TEST_INPUT, '--watch', '--serve', '3000', '-o', TEST_OUTPUT]);
+
+      expect(result.exitCode).toBeNull();
+      unlinkSync(TEST_INPUT);
+      mkdirSync(TEST_INPUT, { recursive: true });
+
+      await triggerWatchEvent('change', TEST_INPUT);
+
+      expect(integrationMocks.notifyError).toHaveBeenCalledTimes(1);
+      expect(integrationMocks.notifyError.mock.calls[0][0]).toEqual(expect.any(String));
+      expect(integrationMocks.notifyReload).not.toHaveBeenCalled();
+    });
+
+    it('supports live preview for tailwind output', async () => {
+      const result = await runMain([TEST_INPUT, '--watch', '--serve', '3000', '--format', 'tailwind', '-o', TEST_OUTPUT]);
+
+      expect(result.exitCode).toBeNull();
+      expect(integrationMocks.startServer).toHaveBeenCalledWith({
+        port: 3000,
+        outputPath: TEST_OUTPUT,
+      });
+      expect(readFileSync(TEST_OUTPUT, 'utf-8')).toContain('tailwindcss');
+      expect(readFileSync(TEST_OUTPUT, 'utf-8')).toContain('Submit');
+    });
+
+    it('derives a default HTML output path when serving without -o', async () => {
+      const result = await runMain([TEST_INPUT, '--watch', '--serve', '3000']);
+
+      expect(result.exitCode).toBeNull();
+      expect(existsSync(DEFAULT_OUTPUT)).toBe(true);
+      expect(integrationMocks.startServer).toHaveBeenCalledWith({
+        port: 3000,
+        outputPath: DEFAULT_OUTPUT,
+      });
+    });
+
+    it('rejects --serve for renderers that do not produce HTML preview output', async () => {
+      await expect(
+        runMain([TEST_INPUT, '--watch', '--serve', '3000', '--format', 'react', '--output-dir', join(TEST_DIR, 'react-out')]),
+      ).rejects.toThrow('--serve currently supports only html and tailwind outputs.');
     });
   });
 });
+
+async function runMain(args: string[]) {
+  const logs: string[] = [];
+  const errors: string[] = [];
+  const originalArgv = [...process.argv];
+
+  const logSpy = vi.spyOn(console, 'log').mockImplementation((...values) => {
+    logs.push(values.map(String).join(' '));
+  });
+  const errorSpy = vi.spyOn(console, 'error').mockImplementation((...values) => {
+    errors.push(values.map(String).join(' '));
+  });
+  const exitSpy = vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
+    throw new Error(`__EXIT__${code ?? 0}`);
+  }) as never);
+  const processOnSpy = vi.spyOn(process, 'on').mockImplementation((() => process) as never);
+
+  process.argv = ['node', 'dist/cli/index.js', ...args];
+
+  try {
+    await main();
+    return { logs, errors, exitCode: null as number | null };
+  } catch (error: any) {
+    if (typeof error?.message === 'string' && error.message.startsWith('__EXIT__')) {
+      return {
+        logs,
+        errors,
+        exitCode: Number(error.message.replace('__EXIT__', '')),
+      };
+    }
+    throw error;
+  } finally {
+    process.argv = originalArgv;
+    logSpy.mockRestore();
+    errorSpy.mockRestore();
+    exitSpy.mockRestore();
+    processOnSpy.mockRestore();
+  }
+}
+
+async function triggerWatchEvent(event: string, filePath: string): Promise<void> {
+  const handler = integrationMocks.state.handlers.get(event);
+  if (!handler) {
+    throw new Error(`Missing watcher handler for ${event}`);
+  }
+
+  handler(filePath);
+  await new Promise((resolve) => setTimeout(resolve, 50));
+}

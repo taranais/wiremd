@@ -5,6 +5,18 @@ import { parse, validate, renderToHTML, renderToJSON } from '../src/index.js';
  * Edge case tests to ensure robustness
  */
 describe('Edge Cases', () => {
+  function getNestedContainerDepth(node: any): number {
+    let depth = 0;
+    let current = node;
+
+    while (current?.type === 'container') {
+      depth += 1;
+      current = current.children?.find((child: any) => child.type === 'container');
+    }
+
+    return depth;
+  }
+
   function expectNestedContainerShape(
     ast: any,
     parentType: string,
@@ -53,6 +65,7 @@ describe('Edge Cases', () => {
       inputs.forEach(input => {
         const ast = parse(input);
         expect(ast.type).toBe('document');
+        expect(ast.children).toEqual([]);
       });
     });
 
@@ -76,7 +89,9 @@ describe('Edge Cases', () => {
       const ast = parse(manyParagraphs);
 
       expect(ast.type).toBe('document');
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children).toHaveLength(1000);
+      expect(ast.children[0].type).toBe('paragraph');
+      expect(ast.children[999].content).toBe('Paragraph text.');
     });
 
     it('should handle many buttons', () => {
@@ -84,7 +99,8 @@ describe('Edge Cases', () => {
       const ast = parse(manyButtons);
 
       expect(ast.type).toBe('document');
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children).toHaveLength(500);
+      expect(ast.children.every((node: any) => node.type === 'button')).toBe(true);
     });
 
     it('should handle very deep nesting', () => {
@@ -92,8 +108,13 @@ describe('Edge Cases', () => {
       const opening = Array(depth).fill('::: section').join('\n');
       const closing = Array(depth).fill(':::').join('\n');
       const nested = `${opening}\nContent\n${closing}`;
+      const ast = parse(nested);
+      const nestedContainer = ast.children[0].children?.find((child: any) => child.type === 'container');
 
-      expect(() => parse(nested)).not.toThrow();
+      expect(ast.children[0].type).toBe('container');
+      expect(ast.children[0].containerType).toBe('section');
+      expect(getNestedContainerDepth(ast.children[0])).toBeGreaterThan(1);
+      expect(nestedContainer?.type).toBe('container');
     });
   });
 
@@ -101,70 +122,97 @@ describe('Edge Cases', () => {
     it('should handle emoji', () => {
       const ast = parse('## 🚀 Rocket\n[Click Me 👍]');
 
-      expect(ast.children.length).toBeGreaterThan(0);
       const heading = ast.children[0];
       expect(heading.type).toBe('heading');
+      expect(heading.content).toBe('🚀 Rocket');
+      expect(ast.children[1].type).toBe('button');
+      expect(ast.children[1].content).toBe('Click Me 👍');
     });
 
     it('should handle Chinese characters', () => {
       const ast = parse('## 标题\n[按钮]');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children[0].content).toBe('标题');
+      expect(ast.children[1].content).toBe('按钮');
     });
 
     it('should handle Arabic characters', () => {
       const ast = parse('## عنوان\n[زر]');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children[0].content).toBe('عنوان');
+      expect(ast.children[1].content).toBe('زر');
     });
 
     it('should handle Cyrillic characters', () => {
       const ast = parse('## Заголовок\n[Кнопка]');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children[0].content).toBe('Заголовок');
+      expect(ast.children[1].content).toBe('Кнопка');
     });
 
     it('should handle mixed unicode', () => {
       const ast = parse('## Title 标题 عنوان 🌍\n[Button 按钮 زر 🔘]');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children[0].content).toBe('Title 标题 عنوان 🌍');
+      expect(ast.children[1].content).toBe('Button 按钮 زر 🔘');
     });
 
     it('should handle special markdown characters', () => {
       const ast = parse('## Title with *asterisks* and _underscores_');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children[0].type).toBe('heading');
+      expect(ast.children[0].content).toContain('Title with');
     });
 
     it('should handle HTML special characters', () => {
       const ast = parse('## Title <with> &tags& "quotes"');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children[0].type).toBe('heading');
+      expect(ast.children[0].content).toBe('Title <with> &tags& "quotes"');
     });
   });
 
   describe('Malformed syntax', () => {
     it('should handle unclosed brackets', () => {
-      expect(() => parse('[Button')).not.toThrow();
-      expect(() => parse('Button]')).not.toThrow();
+      const missingClose = parse('[Button');
+      const missingOpen = parse('Button]');
+
+      expect(missingClose.type).toBe('document');
+      expect(missingOpen.type).toBe('document');
+      expect(missingClose.children.length).toBeGreaterThan(0);
+      expect(missingOpen.children.length).toBeGreaterThan(0);
     });
 
     it('should handle unclosed containers', () => {
-      expect(() => parse('::: hero\nContent')).not.toThrow();
+      const ast = parse('::: hero\nContent');
+      expect(ast.type).toBe('document');
+      expect(ast.children.length).toBeGreaterThan(0);
     });
 
     it('should handle invalid attributes', () => {
-      expect(() => parse('[Button]{{{}')).not.toThrow();
-      expect(() => parse('[Button]{....}')).not.toThrow();
+      const malformedObject = parse('[Button]{{{}');
+      const malformedAttrs = parse('[Button]{....}');
+
+      expect(malformedObject.type).toBe('document');
+      expect(malformedAttrs.type).toBe('document');
+      expect(malformedObject.children.length).toBeGreaterThan(0);
+      expect(malformedAttrs.children.length).toBeGreaterThan(0);
     });
 
     it('should handle nested brackets', () => {
-      expect(() => parse('[[[[Button]]]]')).not.toThrow();
+      const ast = parse('[[[[Button]]]]');
+      expect(ast.type).toBe('document');
+      expect(ast.children.length).toBeGreaterThan(0);
     });
 
     it('should handle mixed delimiters', () => {
-      expect(() => parse('[Button}')).not.toThrow();
-      expect(() => parse('{Button]')).not.toThrow();
+      const leftMismatch = parse('[Button}');
+      const rightMismatch = parse('{Button]');
+
+      expect(leftMismatch.type).toBe('document');
+      expect(rightMismatch.type).toBe('document');
+      expect(leftMismatch.children.length).toBeGreaterThan(0);
+      expect(rightMismatch.children.length).toBeGreaterThan(0);
     });
 
     it.each([
@@ -321,19 +369,20 @@ Username field
     it('should handle CRLF line endings', () => {
       const ast = parse('## Title\r\n[Button]\r\n');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children.map((node: any) => node.type)).toEqual(['heading', 'button']);
     });
 
     it('should handle mixed line endings', () => {
       const ast = parse('## Title\r\n[Button]\n[Input]\r\n\n[Submit]');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children.map((node: any) => node.type)).toEqual(['heading', 'container', 'button']);
+      expect(ast.children[2].content).toBe('Submit');
     });
 
     it('should handle CR-only line endings', () => {
       const ast = parse('## Title\r[Button]\r');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children.map((node: any) => node.type)).toEqual(['heading', 'button']);
     });
   });
 
@@ -341,35 +390,56 @@ Username field
     it('should handle tab characters', () => {
       const ast = parse('\t## Title\n\t[Button]');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children.map((node: any) => node.type)).toEqual(['code']);
+      expect(ast.children[0].value).toContain('## Title');
+      expect(ast.children[0].value).toContain('[Button]');
     });
 
     it('should handle mixed tabs and spaces', () => {
       const ast = parse('  \t## Title\n\t  [Button]');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children.map((node: any) => node.type)).toEqual(['code']);
+      expect(ast.children[0].value).toContain('## Title');
+      expect(ast.children[0].value).toContain('[Button]');
     });
 
     it('should handle deep indentation', () => {
       const ast = parse('            ## Title\n            [Button]');
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children.map((node: any) => node.type)).toEqual(['code']);
+      expect(ast.children[0].value).toContain('## Title');
+      expect(ast.children[0].value).toContain('[Button]');
     });
   });
 
   describe('Boundary conditions', () => {
     it('should handle single character input', () => {
-      expect(() => parse('a')).not.toThrow();
+      const ast = parse('a');
+      expect(ast.type).toBe('document');
+      expect(ast.children).toHaveLength(1);
+      expect(ast.children[0].type).toBe('paragraph');
+      expect(ast.children[0].content).toBe('a');
     });
 
     it('should handle two character input', () => {
-      expect(() => parse('ab')).not.toThrow();
+      const ast = parse('ab');
+      expect(ast.type).toBe('document');
+      expect(ast.children).toHaveLength(1);
+      expect(ast.children[0].type).toBe('paragraph');
+      expect(ast.children[0].content).toBe('ab');
     });
 
     it('should handle input with only punctuation', () => {
-      expect(() => parse('!!!')).not.toThrow();
-      expect(() => parse('###')).not.toThrow();
-      expect(() => parse('***')).not.toThrow();
+      const exclam = parse('!!!');
+      const hashes = parse('###');
+      const stars = parse('***');
+
+      expect(exclam.type).toBe('document');
+      expect(hashes.type).toBe('document');
+      expect(stars.type).toBe('document');
+      expect(exclam.children.length).toBeGreaterThan(0);
+      expect(hashes.children.length).toBeGreaterThan(0);
+      expect(stars.children.length).toBeGreaterThan(0);
     });
 
     it('should handle input with only numbers', () => {
@@ -379,7 +449,9 @@ Username field
     });
 
     it('should handle input with only symbols', () => {
-      expect(() => parse('!@#$%^&*()')).not.toThrow();
+      const ast = parse('!@#$%^&*()');
+      expect(ast.type).toBe('document');
+      expect(ast.children.length).toBeGreaterThan(0);
     });
   });
 
@@ -406,15 +478,16 @@ Username field
     it('should handle very long class names', () => {
       const longClass = 'class-' + 'x'.repeat(1000);
       const ast = parse(`[Button]{.${longClass}}`);
-
-      expect(() => renderToHTML(ast)).not.toThrow();
+      const html = renderToHTML(ast);
+      expect(html).toContain(longClass);
     });
 
     it('should handle many classes', () => {
       const classes = Array(100).fill(0).map((_, i) => `.class${i}`).join(' ');
       const ast = parse(`[Button]{${classes}}`);
-
-      expect(() => renderToHTML(ast)).not.toThrow();
+      const html = renderToHTML(ast);
+      expect(html).toContain('class0');
+      expect(html).toContain('class99');
     });
   });
 
@@ -431,8 +504,8 @@ Username field
     it('should handle special characters in JSON', () => {
       const ast = parse('## Title with "quotes" and \\backslashes\\');
       const json = renderToJSON(ast);
-
-      expect(() => JSON.parse(json)).not.toThrow();
+      const parsed = JSON.parse(json);
+      expect(parsed.children[0].content).toBe('Title with "quotes" and \\backslashes\\');
     });
 
     it('should handle unicode in JSON', () => {
@@ -441,6 +514,7 @@ Username field
 
       const parsed = JSON.parse(json);
       expect(parsed.type).toBe('document');
+      expect(parsed.children[0].content).toBe('🚀 Unicode 中文');
     });
   });
 
@@ -453,15 +527,16 @@ Username field
     });
 
     it('should accept position option with unicode', () => {
-      expect(() => parse('## 🚀 Emoji', { position: true })).not.toThrow();
       const ast = parse('## 🚀 Emoji', { position: true });
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children[0].position).toBeDefined();
+      expect(ast.children[0].content).toBe('🚀 Emoji');
     });
 
     it('should accept position option with mixed line endings', () => {
-      expect(() => parse('## Title\r\n[Button]\n', { position: true })).not.toThrow();
       const ast = parse('## Title\r\n[Button]\n', { position: true });
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children).toHaveLength(2);
+      expect(ast.children[0].position).toBeDefined();
+      expect(ast.children[1].position).toBeDefined();
     });
   });
 
@@ -559,31 +634,47 @@ Username field
     it('should handle all options combinations', () => {
       const markdown = '## Title\n[Button]';
 
-      expect(() => parse(markdown, {})).not.toThrow();
-      expect(() => parse(markdown, { position: true })).not.toThrow();
-      expect(() => parse(markdown, { validate: true })).not.toThrow();
-      expect(() => parse(markdown, { strict: true })).not.toThrow();
-      expect(() => parse(markdown, {
+      const variants = [
+        parse(markdown, {}),
+        parse(markdown, { position: true }),
+        parse(markdown, { validate: true }),
+        parse(markdown, { strict: true }),
+        parse(markdown, {
         position: true,
         validate: true,
         strict: false
-      })).not.toThrow();
+      }),
+      ];
+
+      variants.forEach((ast) => {
+        expect(ast.type).toBe('document');
+        expect(ast.children).toHaveLength(2);
+        expect(ast.children[0].type).toBe('heading');
+        expect(ast.children[1].type).toBe('button');
+      });
     });
 
     it('should handle all render options combinations', () => {
       const ast = parse('[Button]');
 
-      expect(() => renderToHTML(ast, {})).not.toThrow();
-      expect(() => renderToHTML(ast, { style: 'sketch' })).not.toThrow();
-      expect(() => renderToHTML(ast, { pretty: false })).not.toThrow();
-      expect(() => renderToHTML(ast, { inlineStyles: false })).not.toThrow();
-      expect(() => renderToHTML(ast, { classPrefix: 'custom-' })).not.toThrow();
-      expect(() => renderToHTML(ast, {
+      const variants = [
+        renderToHTML(ast, {}),
+        renderToHTML(ast, { style: 'sketch' }),
+        renderToHTML(ast, { pretty: false }),
+        renderToHTML(ast, { inlineStyles: false }),
+        renderToHTML(ast, { classPrefix: 'custom-' }),
+        renderToHTML(ast, {
         style: 'clean',
         pretty: true,
         inlineStyles: true,
         classPrefix: 'app-'
-      })).not.toThrow();
+      }),
+      ];
+
+      variants.forEach((html) => {
+        expect(html).toContain('<!DOCTYPE html>');
+        expect(html.toLowerCase()).toContain('button');
+      });
     });
   });
 
@@ -602,14 +693,19 @@ Username field
         markdown += ':::\n';
       }
 
-      expect(() => parse(markdown)).not.toThrow();
+      const ast = parse(markdown);
+      expect(ast.type).toBe('document');
+      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children[0].type).toBe('container');
     });
 
     it('should handle very wide tree', () => {
       const buttons = Array(500).fill('[Button]').join(' ');
       const ast = parse(buttons);
+      const html = renderToHTML(ast);
 
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children).toHaveLength(1);
+      expect((html.match(/<button/g) || [])).toHaveLength(500);
     });
 
     it('should handle mixed complexity', () => {

@@ -2,10 +2,14 @@ import type { DocumentNode, NodeOf, RenderHelpers, RenderOptions, RenderResult, 
 import { getStyleCSS } from './styles.js';
 import {
   analyzeFrameworkState,
+  buildAnnotationText,
   buildPrefixedClasses,
+  buildResponsiveGridClasses,
   escapeHtml,
   escapeJsString,
+  getStates,
   getIconGlyph,
+  isAnnotationOnlyNode,
   repeatString,
 } from './plugin-utils.js';
 
@@ -20,6 +24,7 @@ interface AngularContext {
   classPrefix: string;
   analysis: ReturnType<typeof analyzeFrameworkState>;
   helpers: RenderHelpers;
+  showAnnotations: boolean;
 }
 
 export function renderAngularArtifacts(
@@ -36,6 +41,7 @@ export function renderAngularArtifacts(
     classPrefix,
     analysis,
     helpers,
+    showAnnotations: Boolean(options.showAnnotations),
   };
   const baseName = `${helpers.toKebabCase(componentName, 'wiremd')}.component`;
   const template = `<div class="${classPrefix}root ${classPrefix}${options.style || 'sketch'}">\n${ast.children.map((child) => renderAngularNode(child, context, 0)).join('\n')}\n</div>`;
@@ -106,83 +112,133 @@ ${controls}
 function renderAngularNode(node: WiremdNode, context: AngularContext, indent: number): string {
   const spaces = repeatString('  ', indent + 1);
 
+  if (isAnnotationOnlyNode(node) && !context.showAnnotations) {
+    return '';
+  }
+
+  let rendered: string;
+
   switch (node.type) {
     case 'button':
-      return renderAngularButton(node, context, indent);
+      rendered = renderAngularButton(node, context, indent);
+      break;
     case 'input':
-      return renderAngularInput(node, context, indent);
+      rendered = renderAngularInput(node, context, indent);
+      break;
     case 'textarea':
-      return renderAngularTextarea(node, context, indent);
+      rendered = renderAngularTextarea(node, context, indent);
+      break;
     case 'select':
-      return renderAngularSelect(node, context, indent);
+      rendered = renderAngularSelect(node, context, indent);
+      break;
     case 'checkbox':
-      return renderAngularCheckbox(node, context, indent);
+      rendered = renderAngularCheckbox(node, context, indent);
+      break;
     case 'radio':
-      return renderAngularRadio(node, context, indent);
+      rendered = renderAngularRadio(node, context, indent);
+      break;
     case 'radio-group':
-      return renderAngularWrapper('div', 'radio-group', node.children, node.props, context, indent);
+      rendered = renderAngularWrapper('div', 'radio-group', node.children, node.props, context, indent);
+      break;
     case 'icon':
-      return `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'icon', node.props)}" data-icon="${escapeHtml(node.props.name)}" aria-label="${escapeHtml(node.props.name)}">${getIconGlyph(node.props.name)}</span>`;
+      rendered = `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'icon', node.props)}" data-icon="${escapeHtml(node.props.name)}" aria-label="${escapeHtml(node.props.name)}">${getIconGlyph(node.props.name)}</span>`;
+      break;
     case 'container':
-      return renderAngularWrapper('div', `container-${node.containerType}`, node.children, node.props, context, indent);
+      rendered = renderAngularWrapper('div', `container-${node.containerType}`, node.children, node.props, context, indent);
+      break;
     case 'nav':
-      return renderAngularWrapper('nav', 'nav', node.children, node.props, context, indent);
+      rendered = renderAngularWrapper('nav', 'nav', node.children, node.props, context, indent);
+      break;
     case 'nav-item':
-      return renderAngularNavItem(node, context, indent);
+      rendered = renderAngularNavItem(node, context, indent);
+      break;
     case 'brand':
-      return renderAngularWrapper('div', 'brand', node.children, node.props, context, indent);
+      rendered = renderAngularWrapper('div', 'brand', node.children, node.props, context, indent);
+      break;
     case 'grid':
-      return renderAngularGrid(node, context, indent);
+      rendered = renderAngularGrid(node, context, indent);
+      break;
     case 'grid-item':
-      return renderAngularWrapper('div', 'grid-item', node.children, node.props, context, indent);
+      rendered = renderAngularWrapper('div', 'grid-item', node.children, node.props, context, indent);
+      break;
     case 'form':
-      return renderAngularForm(node, context, indent);
+      rendered = renderAngularForm(node, context, indent);
+      break;
     case 'heading':
-      return renderAngularHeading(node, context, indent);
+      rendered = renderAngularHeading(node, context, indent);
+      break;
     case 'paragraph':
-      return renderAngularParagraph(node, context, indent);
+      rendered = renderAngularParagraph(node, context, indent);
+      break;
     case 'text':
-      return `${spaces}${escapeHtml(node.content)}`;
+      rendered = `${spaces}${escapeHtml(node.content)}`;
+      break;
     case 'image':
-      return renderAngularImage(node, context, indent);
+      rendered = renderAngularImage(node, context, indent);
+      break;
     case 'link':
-      return renderAngularLink(node, context, indent);
+      rendered = renderAngularLink(node, context, indent);
+      break;
     case 'list':
-      return renderAngularList(node, context, indent);
+      rendered = renderAngularList(node, context, indent);
+      break;
     case 'list-item':
-      return renderAngularListItem(node, context, indent);
+      rendered = renderAngularListItem(node, context, indent);
+      break;
     case 'table':
-      return renderAngularTable(node, context, indent);
+      rendered = renderAngularTable(node, context, indent);
+      break;
     case 'table-header':
-      return renderAngularTableHeader(node, context, indent);
+      rendered = renderAngularTableHeader(node, context, indent);
+      break;
     case 'table-row':
-      return renderAngularTableRow(node, context, indent);
+      rendered = renderAngularTableRow(node, context, indent);
+      break;
     case 'table-cell':
-      return renderAngularTableCell(node, context, indent);
+      rendered = renderAngularTableCell(node, context, indent);
+      break;
     case 'blockquote':
-      return renderAngularWrapper('blockquote', 'blockquote', node.children, node.props, context, indent);
+      rendered = renderAngularWrapper('blockquote', 'blockquote', node.children, node.props, context, indent);
+      break;
     case 'code':
-      return renderAngularCode(node, context, indent);
+      rendered = renderAngularCode(node, context, indent);
+      break;
     case 'separator':
-      return `${spaces}<hr class="${buildPrefixedClasses(context.classPrefix, 'separator', node.props)}" />`;
+      rendered = `${spaces}<hr class="${buildPrefixedClasses(context.classPrefix, 'separator', node.props)}" />`;
+      break;
     case 'alert':
-      return renderAngularWrapper('div', `state-${node.alertType}`, node.children, node.props, context, indent);
+      rendered = renderAngularWrapper('div', `state-${node.alertType}`, node.children, node.props, context, indent);
+      break;
     case 'badge':
-      return `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'badge', node.props)}">${escapeHtml(node.content)}</span>`;
+      rendered = `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'badge', node.props)}">${escapeHtml(node.content)}</span>`;
+      break;
+    case 'loading-state':
+      rendered = renderAngularStateBlock(node.message || 'Loading...', node.children || [], node.props, context, indent, 'clock', 'loading-state');
+      break;
+    case 'empty-state':
+      rendered = renderAngularStateBlock(node.title || 'Empty state', node.children, node.props, context, indent, node.icon, 'empty-state');
+      break;
+    case 'error-state':
+      rendered = renderAngularStateBlock(node.title || 'Error state', node.children, node.props, context, indent, node.icon, 'error-state');
+      break;
     default:
-      return `${spaces}<!-- Unsupported node type: ${(node as { type: string }).type} -->`;
+      rendered = `${spaces}<!-- Unsupported node type: ${(node as { type: string }).type} -->`;
+      break;
   }
+
+  return appendAngularAnnotationMarkup(rendered, ('props' in node && node.props) ? node.props : {}, context, indent);
 }
 
 function renderAngularButton(node: NodeOf<'button'>, context: AngularContext, indent: number): string {
   const spaces = repeatString('  ', indent + 1);
   const classes = buildPrefixedClasses(context.classPrefix, 'button', node.props);
   const buttonType = node.props.type || (node.props.variant === 'primary' ? 'submit' : 'button');
+  const disabled = (node.props.disabled || getStates(node.props).includes('disabled')) ? ' disabled' : '';
   const clickHandler = buttonType === 'submit' ? '' : ` (click)="handleButtonClick('${escapeHtml(node.content || 'button')}')"`;
   const content = node.children
     ? node.children.map((child) => renderAngularNode(child, context, -1)).join('')
     : escapeHtml(node.content || '');
-  return `${spaces}<button class="${classes}" type="${buttonType}"${clickHandler}>${content}</button>`;
+  return `${spaces}<button class="${classes}" type="${buttonType}"${disabled}${clickHandler}>${content}</button>`;
 }
 
 function renderAngularInput(node: NodeOf<'input'>, context: AngularContext, indent: number): string {
@@ -190,7 +246,8 @@ function renderAngularInput(node: NodeOf<'input'>, context: AngularContext, inde
   const classes = buildPrefixedClasses(context.classPrefix, 'input', node.props);
   const field = context.analysis.nodeBindings.get(node) || context.helpers.toIdentifier(node.props.placeholder as string || 'field', 'field');
   const placeholder = node.props.placeholder ? ` placeholder="${escapeHtml(node.props.placeholder)}"` : '';
-  return `${spaces}<input [formControl]="form.controls.${field}" type="${node.props.inputType || 'text'}" class="${classes}"${placeholder} />`;
+  const disabled = (node.props.disabled || getStates(node.props).includes('disabled')) ? ' disabled' : '';
+  return `${spaces}<input [formControl]="form.controls.${field}" type="${node.props.inputType || node.props.type || 'text'}" class="${classes}"${placeholder}${disabled} />`;
 }
 
 function renderAngularTextarea(node: NodeOf<'textarea'>, context: AngularContext, indent: number): string {
@@ -325,7 +382,8 @@ function renderAngularCode(node: NodeOf<'code'>, context: AngularContext, indent
 
 function renderAngularGrid(node: NodeOf<'grid'>, context: AngularContext, indent: number): string {
   const spaces = repeatString('  ', indent + 1);
-  const classes = `${buildPrefixedClasses(context.classPrefix, 'grid', node.props)} ${context.classPrefix}grid-${node.columns}`;
+  const responsiveClass = buildResponsiveGridClasses(context.classPrefix, node.props?.responsive?.gridColumns);
+  const classes = `${buildPrefixedClasses(context.classPrefix, 'grid', node.props)} ${context.classPrefix}grid-${node.columns}${responsiveClass ? ` ${responsiveClass}` : ''}`;
   const children = node.children.map((child) => renderAngularNode(child, context, indent + 1)).join('\n');
   return `${spaces}<div class="${classes}" style="--grid-columns: ${node.columns}">\n${children}\n${spaces}</div>`;
 }
@@ -349,8 +407,43 @@ function renderAngularWrapper(
 ): string {
   const spaces = repeatString('  ', indent + 1);
   const classes = buildPrefixedClasses(context.classPrefix, baseClass, props);
-  const content = children.map((child) => renderAngularNode(child, context, indent + 1)).join('\n');
+  const content = children.map((child) => renderAngularNode(child, context, indent + 1)).filter(Boolean).join('\n');
   return `${spaces}<${tag} class="${classes}">\n${content}\n${spaces}</${tag}>`;
+}
+
+function renderAngularStateBlock(
+  title: string,
+  children: WiremdNode[],
+  props: Record<string, unknown>,
+  context: AngularContext,
+  indent: number,
+  icon?: string,
+  stateKind = 'empty-state',
+): string {
+  const spaces = repeatString('  ', indent + 1);
+  const classes = `${buildPrefixedClasses(context.classPrefix, 'state-block', props)} ${context.classPrefix}container-${stateKind}`;
+  const content = children.map((child) => renderAngularNode(child, context, indent + 1)).filter(Boolean).join('\n');
+  const iconMarkup = icon ? `<span data-icon="${escapeHtml(icon)}">${getIconGlyph(icon)}</span>` : '';
+  return `${spaces}<div class="${classes}">\n${spaces}  <strong>${iconMarkup}${escapeHtml(title)}</strong>\n${content ? `${content}\n` : ''}${spaces}</div>`;
+}
+
+function appendAngularAnnotationMarkup(
+  rendered: string,
+  props: Record<string, unknown>,
+  context: AngularContext,
+  indent: number,
+): string {
+  if (!context.showAnnotations) {
+    return rendered;
+  }
+
+  const annotationText = buildAnnotationText(props);
+  if (!annotationText) {
+    return rendered;
+  }
+
+  const spaces = repeatString('  ', indent + 1);
+  return `${rendered}\n${spaces}<aside class="${context.classPrefix}annotation-callout">${escapeHtml(annotationText)}</aside>`;
 }
 
 function renderAngularValue(value: string | boolean | string[]): string {

@@ -15,7 +15,106 @@ interface ServerOptions {
   outputPath: string;
 }
 
-const liveReloadScript = `
+const liveReloadClientScript = `
+  // Enhanced live-reload client with error handling
+  (function() {
+    let retryCount = 0;
+    const maxRetries = 10;
+    let ws = null;
+
+    // Wrap existing content in preview wrapper
+    const body = document.body;
+    const wrapper = document.createElement('div');
+    wrapper.id = 'wiremd-preview-wrapper';
+    wrapper.className = 'viewport-full';
+    while (body.firstChild && body.firstChild.id !== 'wiremd-toolbar' && body.firstChild.id !== 'wiremd-error-overlay' && body.firstChild.id !== 'wiremd-reload-indicator') {
+      wrapper.appendChild(body.firstChild);
+    }
+    body.appendChild(wrapper);
+
+    const statusEl = document.getElementById('wiremd-status');
+    const errorOverlay = document.getElementById('wiremd-error-overlay');
+    const errorMessage = document.getElementById('wiremd-error-message');
+    const reloadIndicator = document.getElementById('wiremd-reload-indicator');
+
+    // Viewport switcher
+    document.querySelectorAll('.viewport-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.viewport-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const viewport = btn.dataset.viewport;
+        wrapper.className = 'viewport-' + viewport;
+      });
+    });
+
+    function updateStatus(connected) {
+      if (connected) {
+        statusEl.className = 'status connected';
+        statusEl.innerHTML = '<div class="status-dot"></div><span>Connected</span>';
+      } else {
+        statusEl.className = 'status';
+        statusEl.innerHTML = '<div class="status-dot"></div><span>Disconnected</span>';
+      }
+    }
+
+    function showError(message) {
+      errorMessage.textContent = message;
+      errorOverlay.classList.add('show');
+      setTimeout(() => {
+        errorOverlay.classList.remove('show');
+      }, 8000);
+    }
+
+    function connect() {
+      ws = new WebSocket('ws://localhost:__PORT__/__ws');
+
+      ws.onopen = () => {
+        console.log('[wiremd] Connected to live-reload server');
+        updateStatus(true);
+        retryCount = 0;
+      };
+
+      ws.onmessage = (event) => {
+        const data = event.data;
+
+        if (data === 'reload') {
+          console.log('[wiremd] Reloading...');
+          reloadIndicator.classList.add('show');
+          setTimeout(() => {
+            window.location.reload();
+          }, 300);
+        } else if (data.startsWith('error:')) {
+          const errorMsg = data.substring(6);
+          showError(errorMsg);
+        }
+      };
+
+      ws.onclose = () => {
+        updateStatus(false);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          console.log(\`[wiremd] Reconnecting... (\${retryCount}/\${maxRetries})\`);
+          setTimeout(connect, 1000);
+        } else {
+          showError('Lost connection to dev server. Please restart the server.');
+        }
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    }
+
+    connect();
+
+    // Handle page errors
+    window.addEventListener('error', (event) => {
+      console.error('[wiremd] Page error:', event.error);
+    });
+  })();
+`;
+
+const liveReloadMarkupTemplate = `
 <style>
   /* Wiremd Live Preview UI */
   #wiremd-toolbar {
@@ -264,108 +363,21 @@ const liveReloadScript = `
 </div>
 
 <script>
-  // Enhanced live-reload client with error handling
-  (function() {
-    let retryCount = 0;
-    const maxRetries = 10;
-    let ws = null;
-
-    // Wrap existing content in preview wrapper
-    const body = document.body;
-    const wrapper = document.createElement('div');
-    wrapper.id = 'wiremd-preview-wrapper';
-    wrapper.className = 'viewport-full';
-    while (body.firstChild && body.firstChild.id !== 'wiremd-toolbar' && body.firstChild.id !== 'wiremd-error-overlay' && body.firstChild.id !== 'wiremd-reload-indicator') {
-      wrapper.appendChild(body.firstChild);
-    }
-    body.appendChild(wrapper);
-
-    const statusEl = document.getElementById('wiremd-status');
-    const errorOverlay = document.getElementById('wiremd-error-overlay');
-    const errorMessage = document.getElementById('wiremd-error-message');
-    const reloadIndicator = document.getElementById('wiremd-reload-indicator');
-
-    // Viewport switcher
-    document.querySelectorAll('.viewport-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.viewport-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const viewport = btn.dataset.viewport;
-        wrapper.className = 'viewport-' + viewport;
-      });
-    });
-
-    function updateStatus(connected) {
-      if (connected) {
-        statusEl.className = 'status connected';
-        statusEl.innerHTML = '<div class="status-dot"></div><span>Connected</span>';
-      } else {
-        statusEl.className = 'status';
-        statusEl.innerHTML = '<div class="status-dot"></div><span>Disconnected</span>';
-      }
-    }
-
-    function showError(message) {
-      errorMessage.textContent = message;
-      errorOverlay.classList.add('show');
-      setTimeout(() => {
-        errorOverlay.classList.remove('show');
-      }, 8000);
-    }
-
-    function connect() {
-      ws = new WebSocket('ws://localhost:__PORT__/__ws');
-
-      ws.onopen = () => {
-        console.log('[wiremd] Connected to live-reload server');
-        updateStatus(true);
-        retryCount = 0;
-      };
-
-      ws.onmessage = (event) => {
-        const data = event.data;
-
-        if (data === 'reload') {
-          console.log('[wiremd] Reloading...');
-          reloadIndicator.classList.add('show');
-          setTimeout(() => {
-            window.location.reload();
-          }, 300);
-        } else if (data.startsWith('error:')) {
-          const errorMsg = data.substring(6);
-          showError(errorMsg);
-        }
-      };
-
-      ws.onclose = () => {
-        updateStatus(false);
-        if (retryCount < maxRetries) {
-          retryCount++;
-          console.log(\`[wiremd] Reconnecting... (\${retryCount}/\${maxRetries})\`);
-          setTimeout(connect, 1000);
-        } else {
-          showError('Lost connection to dev server. Please restart the server.');
-        }
-      };
-
-      ws.onerror = () => {
-        ws.close();
-      };
-    }
-
-    connect();
-
-    // Handle page errors
-    window.addEventListener('error', (event) => {
-      console.error('[wiremd] Page error:', event.error);
-    });
-  })();
+__WIREMD_CLIENT_SCRIPT__
 </script>
 `;
 
 const wsClients: Set<any> = new Set();
 
-export function startServer(options: ServerOptions): void {
+export function buildLiveReloadClientScript(port: number | string): string {
+  return liveReloadClientScript.replace('__PORT__', String(port));
+}
+
+export function buildLiveReloadMarkup(port: number | string): string {
+  return liveReloadMarkupTemplate.replace('__WIREMD_CLIENT_SCRIPT__', buildLiveReloadClientScript(port));
+}
+
+export function startServer(options: ServerOptions) {
   const { port, outputPath } = options;
 
   // Simple WebSocket implementation without dependencies
@@ -382,7 +394,9 @@ export function startServer(options: ServerOptions): void {
       let html = readFileSync(outputPath, 'utf-8');
 
       // Inject live-reload script before </body>
-      const script = liveReloadScript.replace('__PORT__', String(port));
+      const address = server.address();
+      const actualPort = typeof address === 'object' && address ? address.port : port;
+      const script = buildLiveReloadMarkup(actualPort);
       html = html.replace('</body>', `${script}\n</body>`);
 
       res.writeHead(200, {
@@ -425,11 +439,15 @@ export function startServer(options: ServerOptions): void {
     }
   });
 
-  server.listen(port, () => {
-    console.log(`🚀 Dev server running at http://localhost:${port}`);
+  server.listen(port, '127.0.0.1', () => {
+    const address = server.address();
+    const actualPort = typeof address === 'object' && address ? address.port : port;
+    console.log(`🚀 Dev server running at http://localhost:${actualPort}`);
     console.log(`📡 Live-reload enabled`);
     console.log(`Press Ctrl+C to stop`);
   });
+
+  return server;
 }
 
 export function notifyReload(): void {

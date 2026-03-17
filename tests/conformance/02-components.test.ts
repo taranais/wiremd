@@ -91,6 +91,15 @@ describe('Spec 2: Component Syntax', () => {
       expect(input.props?.required).toBe(true);
     });
 
+    it('preserves supported input attributes like disabled, value, and pattern', () => {
+      const input = getFirstInlineNode('[___]{type:email disabled value:"demo" pattern:"alpha"}');
+      expect(input.type).toBe('input');
+      expect(input.props?.type).toBe('email');
+      expect(input.props?.disabled).toBe(true);
+      expect(input.props?.value).toBe('demo');
+      expect(input.props?.pattern).toBe('alpha');
+    });
+
     it('distinguishes input from code', () => {
       const root = getRootNode('`code`');
       const node = root.type === 'code' ? root : root.children?.find((n: any) => n.type === 'code');
@@ -160,6 +169,18 @@ describe('Spec 2: Component Syntax', () => {
       expect(radio.type).toBe('radio');
       expect(radio.selected).toBe(true);
       expect(radio.label).toBe('Selected alt');
+    });
+
+    it('groups consecutive radio items into a radio-group container', () => {
+      const group = getRootNode(`( ) Small
+(•) Medium
+( ) Large`);
+
+      expect(group.type).toBe('radio-group');
+      expect(Array.isArray(group.children)).toBe(true);
+      expect(group.children).toHaveLength(3);
+      expect(group.children.map((child: any) => child.type)).toEqual(['radio', 'radio', 'radio']);
+      expect(group.children.map((child: any) => child.selected)).toEqual([false, true, false]);
     });
   });
 

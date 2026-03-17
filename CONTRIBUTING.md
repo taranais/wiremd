@@ -35,7 +35,7 @@ Enhancement suggestions are tracked as GitHub issues. When creating an enhanceme
 3. **Make your changes** following our coding standards
 4. **Add tests** for any new functionality
 5. **Update documentation** as needed
-6. **Ensure tests pass** with `npm test`
+6. **Ensure the full validation gate passes**
 7. **Submit a pull request**
 
 ## Development Setup
@@ -55,10 +55,10 @@ cd wiremd
 # Install dependencies
 npm install
 
-# Run tests
-npm test
+# Run the full root suite
+npm run test:all
 
-# Run tests in watch mode
+# Run focused tests in watch mode
 npm run test:watch
 
 # Build the project
@@ -149,18 +149,48 @@ test(parser): add tests for nested containers
 ### Running Tests
 
 ```bash
-# Run all tests
+# Focused root suite
 npm test
 
-# Run with coverage
+# Full root suite
+npm run test:all
+
+# Focused root suite with coverage
 npm run test:coverage
+
+# Full root suite with coverage
+npm run test:all:coverage
 
 # Run specific test file
 npm test -- tests/parser.test.ts
 
 # Watch mode
 npm run test:watch
+
+# Conformance suite
+WIREMD_TEST_SCOPE=full npx vitest run tests/conformance --config vitest.config.ts
+
+# Playground suite
+npx vitest run --config playground/vitest.config.ts
+
+# VS Code extension suite
+cd vscode-extension && npm test
 ```
+
+### Integration Gate
+
+`npm test` is not the merge gate. It runs the default focused root scope from `vitest.config.ts`.
+
+For merge work, syntax changes, parser/render changes, or release candidates, use:
+
+```bash
+npx tsc --noEmit
+npm run test:all
+npx vitest run --config playground/vitest.config.ts
+cd vscode-extension && npm test
+```
+
+Keep [BRANCH-FEATURE-TRACEABILITY.md](./BRANCH-FEATURE-TRACEABILITY.md) current when merged feature surfaces, owning files, or mandatory validation changes.
 
 ### Writing Tests
 
@@ -198,7 +228,11 @@ Releases are managed by project maintainers following semantic versioning (semve
 1. Update version in `package.json`
 2. Update `CHANGELOG.md` with changes
 3. Run `npm run build` and verify
-4. Run `npm test` - all tests must pass
+4. Run the full validation gate and verify:
+   `npx tsc --noEmit`
+   `npm run test:all`
+   `npx vitest run --config playground/vitest.config.ts`
+   `cd vscode-extension && npm test`
 5. Commit: `chore: release v0.x.x`
 6. Create git tag: `git tag v0.x.x`
 7. Push: `git push && git push --tags`
@@ -210,10 +244,11 @@ Releases are managed by project maintainers following semantic versioning (semve
 ### Updating Documentation
 
 - Update README.md for user-facing changes
-- Update SYNTAX-SPEC-v0.1.md for syntax changes
+- Update SYNTAX-SPEC-v0.2.md for current syntax changes and keep `SYNTAX-SPEC-v0.1.md` as the historical baseline
 - Add JSDoc comments for API changes
 - Update examples/ for new features
 - Create docs/ pages for major features
+- Update [BRANCH-FEATURE-TRACEABILITY.md](./BRANCH-FEATURE-TRACEABILITY.md) when merged feature surfaces, owning files, or mandatory validation change
 
 ### Documentation Standards
 
@@ -223,9 +258,18 @@ Releases are managed by project maintainers following semantic versioning (semve
 - Link to related documentation
 - Keep documentation **up-to-date** with code
 
+### Rollback Guidance
+
+For post-merge regressions:
+
+- Revert only the stabilization commit or follow-up commit that introduced the regression when the scope is isolated
+- Prefer a targeted patch for one renderer, parser rule, or integration surface over unwinding the merge sequence
+- Do not revert the full branch merge history unless the regression cannot be isolated
+- Re-run the full validation gate after any rollback or hotfix candidate
+
 ## Getting Help
 
-- **Documentation**: Check README.md and SYNTAX-SPEC-v0.1.md
+- **Documentation**: Check README.md, `SYNTAX-SPEC-v0.2.md`, [BRANCH-FEATURE-TRACEABILITY.md](./BRANCH-FEATURE-TRACEABILITY.md), and any historical compatibility notes in `SYNTAX-SPEC-v0.1.md`
 - **Issues**: Search existing GitHub issues
 - **Discussions**: Use GitHub Discussions for questions
 - **Chat**: (Add Discord/Slack link if available)

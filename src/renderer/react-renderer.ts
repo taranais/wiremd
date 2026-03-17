@@ -153,6 +153,18 @@ export function renderNode(node: WiremdNode, context: ReactRenderContext, indent
       rendered = renderSeparator(node, context, indent);
       break;
 
+    case 'loading-state':
+      rendered = renderStateBlock(node, context, indent, 'loading-state', node.message || 'Loading...', 'clock');
+      break;
+
+    case 'empty-state':
+      rendered = renderStateBlock(node, context, indent, 'empty-state', node.title || 'Empty state', node.icon);
+      break;
+
+    case 'error-state':
+      rendered = renderStateBlock(node, context, indent, 'error-state', node.title || 'Error state', node.icon);
+      break;
+
     default:
       rendered = `${indentStr}{/* Unknown node type: ${(node as any).type} */}`;
       break;
@@ -573,30 +585,49 @@ function renderSeparator(node: any, context: ReactRenderContext, indent: number)
   return `${indentStr}<hr ${classAttr}="${classes}" />`;
 }
 
+function renderStateBlock(
+  node: any,
+  context: ReactRenderContext,
+  indent: number,
+  kind: 'loading-state' | 'empty-state' | 'error-state',
+  title: string,
+  iconName?: string,
+): string {
+  const indentStr = repeatString('  ', indent);
+  const classAttr = context.useClassName ? 'className' : 'class';
+  const classes = buildClasses(context.classPrefix, `container-${kind}`, node.props || {});
+  const iconMarkup = iconName ? renderIcon({ props: { name: iconName } }, context, 0) : '';
+  const children = (node.children || []).map((child: any) => renderNode(child, context, indent + 1)).filter(Boolean).join('\n');
+
+  return `${indentStr}<div ${classAttr}="${classes}">
+${indentStr}  <strong>${iconMarkup}${escapeJSX(title)}</strong>
+${children ? `${children}\n` : ''}${indentStr}</div>`;
+}
+
 /**
  * Build CSS classes string from prefix, base class, and props
  */
 function buildClasses(prefix: string, baseClass: string, props: any): string {
-  const classes = [`${prefix}${baseClass}`];
+  const classes = new Set<string>([`${prefix}${baseClass}`]);
 
   if (props.variant) {
-    classes.push(`${prefix}${baseClass}-${props.variant}`);
+    classes.add(`${prefix}${baseClass}-${props.variant}`);
   }
 
   if (props.classes && Array.isArray(props.classes)) {
     props.classes.forEach((cls: string) => {
-      if (props.variant && cls === props.variant) {
+      if ((props.variant && cls === props.variant) || shouldSkipPrefixedClass(baseClass, cls)) {
         return;
       }
-      classes.push(`${prefix}${cls}`);
+      classes.add(`${prefix}${cls}`);
     });
   }
   const states = getStates(props);
   states.forEach((state) => {
-    classes.push(`${prefix}state-${state}`);
+    classes.add(`${prefix}state-${state}`);
   });
 
-  return classes.join(' ');
+  return Array.from(classes).join(' ');
 }
 
 function getStates(props: any): string[] {
@@ -638,6 +669,16 @@ function buildResponsiveGridClasses(prefix: string, gridColumns?: Record<string,
   });
 
   return classes.join(' ');
+}
+
+function shouldSkipPrefixedClass(baseClass: string, className: string): boolean {
+  const normalizedClass = className.trim();
+
+  if (baseClass !== 'grid') {
+    return false;
+  }
+
+  return /^grid-\d+$/.test(normalizedClass) || /^(xs|sm|md|lg|xl|2xl):grid-\d+$/.test(normalizedClass);
 }
 
 function appendAnnotationJSX(

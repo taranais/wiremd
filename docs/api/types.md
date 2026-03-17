@@ -51,7 +51,7 @@ import type { DocumentNode } from 'wiremd';
 const ast: DocumentNode = parse('## Title\n[Button]');
 
 console.log(ast.type); // 'document'
-console.log(ast.version); // '0.1'
+console.log(ast.version); // '0.2'
 console.log(ast.children.length); // 2
 ```
 
@@ -174,7 +174,7 @@ const ast = parse('[Button]{.primary disabled}');
 const button = ast.children[0];
 if (button.type === 'button') {
   console.log(button.props.classes); // ['primary']
-  console.log(button.props.state); // 'disabled'
+  console.log(button.props.disabled); // true
 }
 ```
 

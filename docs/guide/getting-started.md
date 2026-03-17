@@ -111,4 +111,4 @@ Open http://localhost:3000 in your browser. Changes to your markdown file will a
 - [Learn the complete syntax](./syntax.md)
 - [Explore examples](../examples/)
 - [Read API documentation](../api/)
-- [Check the syntax specification](../../SYNTAX-SPEC-v0.1.md)
+- [Check the syntax specification](../../SYNTAX-SPEC-v0.2.md)

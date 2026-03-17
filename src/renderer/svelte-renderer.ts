@@ -2,10 +2,14 @@ import type { DocumentNode, NodeOf, RenderHelpers, RenderOptions, RenderResult, 
 import { getStyleCSS } from './styles.js';
 import {
   analyzeFrameworkState,
+  buildAnnotationText,
   buildPrefixedClasses,
+  buildResponsiveGridClasses,
   escapeHtml,
   escapeJsString,
+  getStates,
   getIconGlyph,
+  isAnnotationOnlyNode,
   repeatString,
 } from './plugin-utils.js';
 
@@ -18,6 +22,7 @@ interface SvelteContext {
   classPrefix: string;
   analysis: ReturnType<typeof analyzeFrameworkState>;
   helpers: RenderHelpers;
+  showAnnotations: boolean;
 }
 
 export function renderSvelteComponent(
@@ -33,6 +38,7 @@ export function renderSvelteComponent(
     classPrefix,
     analysis,
     helpers,
+    showAnnotations: Boolean(options.showAnnotations),
   };
   const markup = ast.children.map((child) => renderSvelteNode(child, context, 0)).join('\n');
   const script = renderSvelteScript(analysis, typescript);
@@ -77,84 +83,134 @@ function renderSvelteScript(analysis: ReturnType<typeof analyzeFrameworkState>, 
 function renderSvelteNode(node: WiremdNode, context: SvelteContext, indent: number): string {
   const spaces = repeatString('  ', indent + 1);
 
+  if (isAnnotationOnlyNode(node) && !context.showAnnotations) {
+    return '';
+  }
+
+  let rendered: string;
+
   switch (node.type) {
     case 'button':
-      return renderSvelteButton(node, context, indent);
+      rendered = renderSvelteButton(node, context, indent);
+      break;
     case 'input':
-      return renderSvelteInput(node, context, indent);
+      rendered = renderSvelteInput(node, context, indent);
+      break;
     case 'textarea':
-      return renderSvelteTextarea(node, context, indent);
+      rendered = renderSvelteTextarea(node, context, indent);
+      break;
     case 'select':
-      return renderSvelteSelect(node, context, indent);
+      rendered = renderSvelteSelect(node, context, indent);
+      break;
     case 'checkbox':
-      return renderSvelteCheckbox(node, context, indent);
+      rendered = renderSvelteCheckbox(node, context, indent);
+      break;
     case 'radio':
-      return renderSvelteRadio(node, context, indent);
+      rendered = renderSvelteRadio(node, context, indent);
+      break;
     case 'radio-group':
-      return renderSvelteWrapper('div', 'radio-group', node.children, node.props, context, indent);
+      rendered = renderSvelteWrapper('div', 'radio-group', node.children, node.props, context, indent);
+      break;
     case 'icon':
-      return `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'icon', node.props)}" data-icon="${escapeHtml(node.props.name)}" aria-label="${escapeHtml(node.props.name)}">${getIconGlyph(node.props.name)}</span>`;
+      rendered = `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'icon', node.props)}" data-icon="${escapeHtml(node.props.name)}" aria-label="${escapeHtml(node.props.name)}">${getIconGlyph(node.props.name)}</span>`;
+      break;
     case 'container':
-      return renderSvelteWrapper('div', `container-${node.containerType}`, node.children, node.props, context, indent);
+      rendered = renderSvelteWrapper('div', `container-${node.containerType}`, node.children, node.props, context, indent);
+      break;
     case 'nav':
-      return renderSvelteWrapper('nav', 'nav', node.children, node.props, context, indent);
+      rendered = renderSvelteWrapper('nav', 'nav', node.children, node.props, context, indent);
+      break;
     case 'nav-item':
-      return renderSvelteNavItem(node, context, indent);
+      rendered = renderSvelteNavItem(node, context, indent);
+      break;
     case 'brand':
-      return renderSvelteWrapper('div', 'brand', node.children, node.props, context, indent);
+      rendered = renderSvelteWrapper('div', 'brand', node.children, node.props, context, indent);
+      break;
     case 'grid':
-      return renderSvelteGrid(node, context, indent);
+      rendered = renderSvelteGrid(node, context, indent);
+      break;
     case 'grid-item':
-      return renderSvelteWrapper('div', 'grid-item', node.children, node.props, context, indent);
+      rendered = renderSvelteWrapper('div', 'grid-item', node.children, node.props, context, indent);
+      break;
     case 'form':
-      return renderSvelteForm(node, context, indent);
+      rendered = renderSvelteForm(node, context, indent);
+      break;
     case 'heading':
-      return renderSvelteHeading(node, context, indent);
+      rendered = renderSvelteHeading(node, context, indent);
+      break;
     case 'paragraph':
-      return renderSvelteParagraph(node, context, indent);
+      rendered = renderSvelteParagraph(node, context, indent);
+      break;
     case 'text':
-      return `${spaces}${escapeHtml(node.content)}`;
+      rendered = `${spaces}${escapeHtml(node.content)}`;
+      break;
     case 'image':
-      return renderSvelteImage(node, context, indent);
+      rendered = renderSvelteImage(node, context, indent);
+      break;
     case 'link':
-      return renderSvelteLink(node, context, indent);
+      rendered = renderSvelteLink(node, context, indent);
+      break;
     case 'list':
-      return renderSvelteList(node, context, indent);
+      rendered = renderSvelteList(node, context, indent);
+      break;
     case 'list-item':
-      return renderSvelteListItem(node, context, indent);
+      rendered = renderSvelteListItem(node, context, indent);
+      break;
     case 'table':
-      return renderSvelteTable(node, context, indent);
+      rendered = renderSvelteTable(node, context, indent);
+      break;
     case 'table-header':
-      return renderSvelteTableHeader(node, context, indent);
+      rendered = renderSvelteTableHeader(node, context, indent);
+      break;
     case 'table-row':
-      return renderSvelteTableRow(node, context, indent);
+      rendered = renderSvelteTableRow(node, context, indent);
+      break;
     case 'table-cell':
-      return renderSvelteTableCell(node, context, indent);
+      rendered = renderSvelteTableCell(node, context, indent);
+      break;
     case 'blockquote':
-      return renderSvelteWrapper('blockquote', 'blockquote', node.children, node.props, context, indent);
+      rendered = renderSvelteWrapper('blockquote', 'blockquote', node.children, node.props, context, indent);
+      break;
     case 'code':
-      return renderSvelteCode(node, context, indent);
+      rendered = renderSvelteCode(node, context, indent);
+      break;
     case 'separator':
-      return `${spaces}<hr class="${buildPrefixedClasses(context.classPrefix, 'separator', node.props)}" />`;
+      rendered = `${spaces}<hr class="${buildPrefixedClasses(context.classPrefix, 'separator', node.props)}" />`;
+      break;
     case 'alert':
-      return renderSvelteWrapper('div', `state-${node.alertType}`, node.children, node.props, context, indent);
+      rendered = renderSvelteWrapper('div', `state-${node.alertType}`, node.children, node.props, context, indent);
+      break;
     case 'badge':
-      return `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'badge', node.props)}">${escapeHtml(node.content)}</span>`;
+      rendered = `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'badge', node.props)}">${escapeHtml(node.content)}</span>`;
+      break;
+    case 'loading-state':
+      rendered = renderSvelteStateBlock(node.message || 'Loading...', node.children || [], node.props, context, indent, 'clock', 'loading-state');
+      break;
+    case 'empty-state':
+      rendered = renderSvelteStateBlock(node.title || 'Empty state', node.children, node.props, context, indent, node.icon, 'empty-state');
+      break;
+    case 'error-state':
+      rendered = renderSvelteStateBlock(node.title || 'Error state', node.children, node.props, context, indent, node.icon, 'error-state');
+      break;
     default:
-      return `${spaces}<!-- Unsupported node type: ${(node as { type: string }).type} -->`;
+      rendered = `${spaces}<!-- Unsupported node type: ${(node as { type: string }).type} -->`;
+      break;
   }
+
+  return appendSvelteAnnotationMarkup(rendered, ('props' in node && node.props) ? node.props : {}, context, indent);
 }
 
 function renderSvelteButton(node: NodeOf<'button'>, context: SvelteContext, indent: number): string {
   const spaces = repeatString('  ', indent + 1);
   const classes = buildPrefixedClasses(context.classPrefix, 'button', node.props);
   const buttonType = node.props.type || (node.props.variant === 'primary' ? 'submit' : 'button');
+  const disabled = (node.props.disabled || getStates(node.props).includes('disabled')) ? ' disabled' : '';
   const clickHandler = buttonType === 'submit' ? '' : ` on:click={() => handleButtonClick('${escapeJsString(node.content || 'button')}')}`;
   const content = node.children
     ? node.children.map((child) => renderSvelteNode(child, context, -1)).join('')
     : escapeHtml(node.content || '');
 
-  return `${spaces}<button class="${classes}" type="${buttonType}"${clickHandler}>${content}</button>`;
+  return `${spaces}<button class="${classes}" type="${buttonType}"${disabled}${clickHandler}>${content}</button>`;
 }
 
 function renderSvelteInput(node: NodeOf<'input'>, context: SvelteContext, indent: number): string {
@@ -162,7 +218,8 @@ function renderSvelteInput(node: NodeOf<'input'>, context: SvelteContext, indent
   const classes = buildPrefixedClasses(context.classPrefix, 'input', node.props);
   const field = context.analysis.nodeBindings.get(node) || context.helpers.toIdentifier(node.props.placeholder as string || 'field', 'field');
   const placeholder = node.props.placeholder ? ` placeholder="${escapeHtml(node.props.placeholder)}"` : '';
-  return `${spaces}<input bind:value={${field}} type="${node.props.inputType || 'text'}" class="${classes}"${placeholder} />`;
+  const disabled = (node.props.disabled || getStates(node.props).includes('disabled')) ? ' disabled' : '';
+  return `${spaces}<input bind:value={${field}} type="${node.props.inputType || node.props.type || 'text'}" class="${classes}"${placeholder}${disabled} />`;
 }
 
 function renderSvelteTextarea(node: NodeOf<'textarea'>, context: SvelteContext, indent: number): string {
@@ -298,7 +355,8 @@ function renderSvelteCode(node: NodeOf<'code'>, context: SvelteContext, indent: 
 
 function renderSvelteGrid(node: NodeOf<'grid'>, context: SvelteContext, indent: number): string {
   const spaces = repeatString('  ', indent + 1);
-  const classes = `${buildPrefixedClasses(context.classPrefix, 'grid', node.props)} ${context.classPrefix}grid-${node.columns}`;
+  const responsiveClass = buildResponsiveGridClasses(context.classPrefix, node.props?.responsive?.gridColumns);
+  const classes = `${buildPrefixedClasses(context.classPrefix, 'grid', node.props)} ${context.classPrefix}grid-${node.columns}${responsiveClass ? ` ${responsiveClass}` : ''}`;
   const children = node.children.map((child) => renderSvelteNode(child, context, indent + 1)).join('\n');
   return `${spaces}<div class="${classes}" style="--grid-columns: ${node.columns}">\n${children}\n${spaces}</div>`;
 }
@@ -322,8 +380,43 @@ function renderSvelteWrapper(
 ): string {
   const spaces = repeatString('  ', indent + 1);
   const classes = buildPrefixedClasses(context.classPrefix, baseClass, props);
-  const content = children.map((child) => renderSvelteNode(child, context, indent + 1)).join('\n');
+  const content = children.map((child) => renderSvelteNode(child, context, indent + 1)).filter(Boolean).join('\n');
   return `${spaces}<${tag} class="${classes}">\n${content}\n${spaces}</${tag}>`;
+}
+
+function renderSvelteStateBlock(
+  title: string,
+  children: WiremdNode[],
+  props: Record<string, unknown>,
+  context: SvelteContext,
+  indent: number,
+  icon?: string,
+  stateKind = 'empty-state',
+): string {
+  const spaces = repeatString('  ', indent + 1);
+  const classes = `${buildPrefixedClasses(context.classPrefix, 'state-block', props)} ${context.classPrefix}container-${stateKind}`;
+  const content = children.map((child) => renderSvelteNode(child, context, indent + 1)).filter(Boolean).join('\n');
+  const iconMarkup = icon ? `<span data-icon="${escapeHtml(icon)}">${getIconGlyph(icon)}</span>` : '';
+  return `${spaces}<div class="${classes}">\n${spaces}  <strong>${iconMarkup}${escapeHtml(title)}</strong>\n${content ? `${content}\n` : ''}${spaces}</div>`;
+}
+
+function appendSvelteAnnotationMarkup(
+  rendered: string,
+  props: Record<string, unknown>,
+  context: SvelteContext,
+  indent: number,
+): string {
+  if (!context.showAnnotations) {
+    return rendered;
+  }
+
+  const annotationText = buildAnnotationText(props);
+  if (!annotationText) {
+    return rendered;
+  }
+
+  const spaces = repeatString('  ', indent + 1);
+  return `${rendered}\n${spaces}<aside class="${context.classPrefix}annotation-callout">${escapeHtml(annotationText)}</aside>`;
 }
 
 function renderSvelteValue(value: string | boolean | string[]): string {

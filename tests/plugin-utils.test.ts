@@ -125,4 +125,31 @@ describe('Renderer Plugin Utils', () => {
     expect(analysis.fields.find((field) => field.key === 'contactMethod')?.options).toEqual(['email', 'phone']);
     expect(types).toEqual(expect.arrayContaining(['form', 'input', 'select', 'checkbox', 'radio-group', 'radio', 'button']));
   });
+
+  it('accepts canonical input props.type when legacy inputType is absent', () => {
+    const ast: DocumentNode = {
+      type: 'document',
+      version: '0.1',
+      meta: {},
+      children: [
+        {
+          type: 'input',
+          props: {
+            type: 'email',
+            placeholder: 'Email',
+          },
+        },
+      ],
+    };
+
+    const analysis = analyzeFrameworkState(ast, createRenderHelpers());
+
+    expect(analysis.fields).toEqual([
+      expect.objectContaining({
+        key: 'email',
+        nodeType: 'input',
+        inputType: 'email',
+      }),
+    ]);
+  });
 });

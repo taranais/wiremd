@@ -210,6 +210,30 @@ describe('Tailwind Renderer', () => {
       expect(html).toContain('class="bg-gray-900 text-gray-300 p-8 rounded-lg mt-12"');
     });
 
+    it('should render loading, empty, and error state containers', () => {
+      const ast = parse(`
+::: loading
+Sync in progress
+:::
+
+::: empty-state
+No results
+:::
+
+::: error-state
+Try again later
+:::
+      `.trim());
+      const html = renderToTailwind(ast);
+
+      expect(html).toContain('border-gray-300 bg-gray-50 text-gray-800');
+      expect(html).toContain('Sync in progress');
+      expect(html).toContain('border-slate-300 bg-slate-50 text-slate-800');
+      expect(html).toContain('No results');
+      expect(html).toContain('border-red-300 bg-red-50 text-red-900');
+      expect(html).toContain('Try again later');
+    });
+
     it('should render viewport visibility classes for mobile blocks', () => {
       const ast = parse('::: mobile\n[Submit]\n:::');
       const html = renderToTailwind(ast);

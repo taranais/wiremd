@@ -8,7 +8,6 @@ import {
   renderToTailwind,
   renderToVue,
 } from '../src/index.js';
-import { createRadioGroupAst } from './fixtures/render-fixtures.js';
 
 describe('Render Routing And Regression', () => {
   it('routes single-artifact formats through the universal render API without changing output', () => {
@@ -21,8 +20,11 @@ describe('Render Routing And Regression', () => {
     expect(render(ast, { format: 'svelte' })).toBe(renderToSvelte(ast));
   });
 
-  it('renders deterministic radio-group names across legacy renderers', () => {
-    const ast = createRadioGroupAst();
+  it('renders deterministic radio-group names from parsed markdown across legacy renderers', () => {
+    const ast = parse(`
+( ) Small
+(•) Medium
+`);
     const htmlA = renderToHTML(ast);
     const htmlB = renderToHTML(ast);
     const reactA = renderToReact(ast);

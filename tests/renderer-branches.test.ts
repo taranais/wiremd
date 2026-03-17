@@ -1,19 +1,44 @@
 import { describe, expect, it } from 'vitest';
-import { renderToHTML, renderToReact, renderToTailwind } from '../src/index.js';
-import { renderNode as renderHtmlNode } from '../src/renderer/html-renderer.js';
+import { parse, renderToHTML, renderToReact, renderToTailwind } from '../src/index.js';
 import { renderNode as renderReactNode } from '../src/renderer/react-renderer.js';
 import { renderNode as renderTailwindNode } from '../src/renderer/tailwind-renderer.js';
-import { createLegacyRendererAst } from './fixtures/render-fixtures.js';
 
 describe('Renderer Branch Coverage', () => {
-  it('covers advanced branches in the HTML renderer', () => {
-    const html = renderToHTML(createLegacyRendererAst());
+  const parsedBranchAst = parse(`
+Paragraph with **rich** content
+
+![Hero image](/hero.png)
+{width:320 height:180}
+
+[Documentation](/docs "Read docs")
+
+:github:
+
+1. First item
+2. Second item
+
+| Name | Value |
+| --- | ---: |
+| Visits | 120 |
+
+> Weekly digest
+
+\`npm test\`
+
+\`\`\`ts
+const ready = true;
+\`\`\`
+
+---
+`);
+
+  it('covers advanced branches in the HTML renderer using parsed markdown plus icon styling branches', () => {
+    const html = renderToHTML(parsedBranchAst);
 
     expect(html).toContain('Paragraph with <strong>rich</strong> content');
     expect(html).toContain('width="320"');
     expect(html).toContain('height="180"');
     expect(html).toContain('title="Read docs"');
-    expect(html).toContain('style="font-family: monospace; font-weight: bold; font-style: normal;"');
     expect(html).toContain('<ol class="wmd-list">');
     expect(html).toContain('<tbody>');
     expect(html).toContain('wmd-align-right');
@@ -22,10 +47,11 @@ describe('Renderer Branch Coverage', () => {
     expect(html).toContain('<pre class="wmd-code-block"><code data-lang="ts">const ready = true;</code></pre>');
     expect(html).toContain('<hr class="wmd-separator" />');
     expect(html).toContain('Weekly digest');
+    expect(html).toContain('style="font-family: monospace; font-weight: bold; font-style: normal;"');
   });
 
   it('covers the alternate class attribute branch and fallback comment in the React renderer', () => {
-    const react = renderToReact(createLegacyRendererAst(), {
+    const react = renderToReact(parsedBranchAst, {
       typescript: false,
     });
     const jsx = renderReactNode(
@@ -73,7 +99,7 @@ describe('Renderer Branch Coverage', () => {
   });
 
   it('covers alternate branches in the Tailwind renderer', () => {
-    const html = renderToTailwind(createLegacyRendererAst());
+    const html = renderToTailwind(parsedBranchAst);
     const warningAlert = renderTailwindNode(
       {
         type: 'container',

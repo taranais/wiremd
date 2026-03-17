@@ -14,10 +14,9 @@ describe('Error Handling', () => {
     });
 
     it('should handle whitespace-only input', () => {
-      expect(() => parse('   \n\n  \t  \n')).not.toThrow();
-
       const ast = parse('   \n\n  \t  \n');
       expect(ast.type).toBe('document');
+      expect(ast.children).toEqual([]);
     });
 
     it('should handle malformed input gracefully', () => {
@@ -28,42 +27,52 @@ describe('Error Handling', () => {
     });
 
     it('should accept position option without errors', () => {
-      // Position tracking is not yet implemented but should not cause errors
-      expect(() => parse('## Title\n[Button]', { position: true })).not.toThrow();
-
       const ast = parse('## Title\n[Button]', { position: true });
       expect(ast.type).toBe('document');
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children).toHaveLength(2);
+      expect(ast.children[0].type).toBe('heading');
+      expect(ast.children[0].position).toBeDefined();
+      expect(ast.children[1].type).toBe('button');
+      expect(ast.children[1].position).toBeDefined();
     });
 
     it('should handle very long input', () => {
       const longInput = 'Text paragraph. '.repeat(1000);
-      expect(() => parse(longInput)).not.toThrow();
-
       const ast = parse(longInput);
       expect(ast.type).toBe('document');
+      expect(ast.children).toHaveLength(1);
+      expect(ast.children[0].type).toBe('paragraph');
+      expect(ast.children[0].content.startsWith('Text paragraph.')).toBe(true);
     });
 
     it('should handle deeply nested structures', () => {
       const nested = `::: outer\n`.repeat(10) + 'Content' + `\n:::`.repeat(10);
+      const ast = parse(nested);
+      const nestedContainer = ast.children[0].children?.find((child: any) => child.type === 'container');
+      const paragraph = nestedContainer?.children?.find((child: any) => child.type === 'paragraph');
 
-      expect(() => parse(nested)).not.toThrow();
+      expect(ast.children[0].type).toBe('container');
+      expect(ast.children[0].containerType).toBe('outer');
+      expect(nestedContainer?.type).toBe('container');
+      expect(nestedContainer?.containerType).toBe('outer');
+      expect(paragraph?.content).toContain('Content');
     });
 
     it('should handle special characters', () => {
       const special = '## Title with émojis 🚀 and spëcial ¢haracters';
-      expect(() => parse(special)).not.toThrow();
-
       const ast = parse(special);
       expect(ast.children[0].type).toBe('heading');
+      expect(ast.children[0].content).toBe('Title with émojis 🚀 and spëcial ¢haracters');
     });
 
     it('should handle unicode', () => {
       const unicode = '## 中文標題\n[按鈕]';
-      expect(() => parse(unicode)).not.toThrow();
-
       const ast = parse(unicode);
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children).toHaveLength(2);
+      expect(ast.children[0].type).toBe('heading');
+      expect(ast.children[0].content).toBe('中文標題');
+      expect(ast.children[1].type).toBe('button');
+      expect(ast.children[1].content).toBe('按鈕');
     });
   });
 
@@ -77,7 +86,7 @@ describe('Error Handling', () => {
 
       const errors = validate(invalidAST);
       expect(errors.length).toBeGreaterThan(0);
-      expect(errors[0].code).toBeDefined();
+      expect(errors[0].code).toBe('INVALID_ROOT_TYPE');
     });
 
     it('should provide helpful error messages', () => {
@@ -132,8 +141,10 @@ describe('Error Handling', () => {
   describe('Safe rendering', () => {
     it('should not throw on valid AST', () => {
       const ast = parse('## Title\n[Button]');
-
-      expect(() => renderToHTML(ast)).not.toThrow();
+      const html = renderToHTML(ast);
+      expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('Title');
+      expect(html).toContain('Button');
     });
 
     it('should handle AST with missing optional fields', () => {
@@ -147,7 +158,9 @@ describe('Error Handling', () => {
       const styles = ['sketch', 'clean', 'wireframe', 'material', 'brutal', 'none'] as const;
 
       styles.forEach(style => {
-        expect(() => renderToHTML(ast, { style })).not.toThrow();
+        const html = renderToHTML(ast, { style });
+        expect(html).toContain('<!DOCTYPE html>');
+        expect(html).toContain('Button');
       });
     });
 
@@ -260,7 +273,8 @@ describe('Error Handling', () => {
 
       const result = renderSafely('## Valid Markdown\n[Button]');
       expect(result.success).toBe(true);
-      expect(result.html).toBeDefined();
+      expect(result.html).toContain('Valid Markdown');
+      expect(result.html).toContain('Button');
 
       const invalidResult = renderSafely('[Button]');
       // Should still succeed as this is valid
@@ -353,30 +367,45 @@ describe('Error Handling', () => {
   describe('Edge case error handling', () => {
     it('should handle null or undefined safely', () => {
       // Type system prevents this, but test runtime behavior
-      expect(() => parse('')).not.toThrow();
+      const ast = parse('');
+      expect(ast.type).toBe('document');
+      expect(ast.children).toEqual([]);
     });
 
     it('should handle extremely long lines', () => {
       const longLine = 'x'.repeat(100000);
-      expect(() => parse(longLine)).not.toThrow();
+      const ast = parse(longLine);
+      expect(ast.type).toBe('document');
+      expect(ast.children).toHaveLength(1);
+      expect(ast.children[0].type).toBe('paragraph');
+      expect(ast.children[0].content.length).toBe(100000);
     });
 
     it('should handle many nodes', () => {
       const manyButtons = Array(1000).fill('[Button]').join('\n\n');
-      expect(() => parse(manyButtons)).not.toThrow();
-
       const ast = parse(manyButtons);
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.type).toBe('document');
+      expect(ast.children).toHaveLength(1000);
+      expect(ast.children[0].type).toBe('button');
+      expect(ast.children[999].type).toBe('button');
     });
 
     it('should handle mixed newlines', () => {
       const mixed = '## Title\r\n[Button]\n\r[Input]\r\n\r\n';
-      expect(() => parse(mixed)).not.toThrow();
+      const ast = parse(mixed);
+      expect(ast.type).toBe('document');
+      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children[0].type).toBe('heading');
     });
 
     it('should handle tabs and spaces', () => {
       const withTabs = '\t## Title\n\t[Button]';
-      expect(() => parse(withTabs)).not.toThrow();
+      const ast = parse(withTabs);
+      expect(ast.type).toBe('document');
+      expect(ast.children).toHaveLength(1);
+      expect(ast.children[0].type).toBe('code');
+      expect(ast.children[0].value).toContain('## Title');
+      expect(ast.children[0].value).toContain('[Button]');
     });
   });
 

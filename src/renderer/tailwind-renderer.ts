@@ -138,6 +138,18 @@ export function renderNode(node: WiremdNode, context: TailwindRenderContext): st
       rendered = renderSeparator();
       break;
 
+    case 'loading-state':
+      rendered = renderStateBlock(node, context, 'loading-state', node.message || 'Loading...', 'clock');
+      break;
+
+    case 'empty-state':
+      rendered = renderStateBlock(node, context, 'empty-state', node.title || 'Empty state', node.icon);
+      break;
+
+    case 'error-state':
+      rendered = renderStateBlock(node, context, 'error-state', node.title || 'Error state', node.icon);
+      break;
+
     default:
       rendered = `<!-- Unknown node type: ${(node as any).type} -->`;
       break;
@@ -626,6 +638,31 @@ function renderSeparator(): string {
   const classes = 'border-t border-gray-300 my-8';
 
   return `<hr class="${classes}" />`;
+}
+
+function renderStateBlock(
+  node: any,
+  context: TailwindRenderContext,
+  kind: 'loading-state' | 'empty-state' | 'error-state',
+  title: string,
+  iconName?: string,
+): string {
+  let classes = 'rounded-lg border px-4 py-4 my-4';
+
+  if (kind === 'loading-state') {
+    classes += ' border-gray-300 bg-gray-50 text-gray-800';
+  } else if (kind === 'empty-state') {
+    classes += ' border-slate-300 bg-slate-50 text-slate-800';
+  } else {
+    classes += ' border-red-300 bg-red-50 text-red-900';
+  }
+
+  const iconMarkup = iconName ? renderIcon({ props: { name: iconName } }, context) : '';
+  const children = (node.children || []).map((child: any) => renderNode(child, context)).filter(Boolean).join('\n  ');
+
+  return `<div class="${classes}">
+  <strong>${iconMarkup}${escapeHtml(title)}</strong>
+  ${children ? `${children}\n` : ''}</div>`;
 }
 
 /**

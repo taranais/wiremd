@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { render, renderToVue } from '../src/index.js';
-import { createFrameworkRendererAst, createVueStateAst } from './fixtures/render-fixtures.js';
+import { parse } from '../src/parser/index.js';
+import { createFrameworkRendererMarkdown, createFrameworkSeededAst } from './fixtures/render-fixtures.js';
 
 describe('Vue Renderer', () => {
   it('renders a typed Composition API single-file component by default', () => {
-    const output = renderToVue(createFrameworkRendererAst(), {
+    const output = renderToVue(parse(createFrameworkRendererMarkdown()), {
       componentName: 'ProfileForm',
     });
 
@@ -15,16 +16,13 @@ describe('Vue Renderer', () => {
     expect(output).toContain('const emit = defineEmits<{');
     expect(output).toContain('const formState = reactive({');
     expect(output).toContain("email: ''");
-    expect(output).toContain("message: 'Hello from wiremd'");
-    expect(output).toContain("topic: 'support'");
     expect(output).toContain('acceptTerms: true');
-    expect(output).toContain("contactMethod: 'email'");
-    expect(output).toContain('<form class="wmd-form" @submit.prevent="handleSubmit">');
+    expect(output).toContain('<div class="wmd-root wmd-sketch">');
     expect(output).toContain('v-model="formState.email"');
     expect(output).toContain('v-model="formState.message"');
-    expect(output).toContain('v-model="formState.topic"');
+    expect(output).toContain('v-model="formState.selectTopic"');
     expect(output).toContain('v-model="formState.acceptTerms"');
-    expect(output).toContain('v-model="formState.contactMethod"');
+    expect(output).toMatch(/v-model=\"formState\.radiogroup\d+\"/);
     expect(output).toContain(`@click="handleButtonClick('Cancel')"`);
     expect(output).toContain('<nav class="wmd-nav">');
     expect(output).toContain('style="--grid-columns: 2"');
@@ -32,8 +30,19 @@ describe('Vue Renderer', () => {
     expect(output).toContain('<style scoped>');
   });
 
+  it('supports non-canonical seeded form defaults from direct AST input', () => {
+    const output = renderToVue(createFrameworkSeededAst(), {
+      componentName: 'SeededVue',
+    });
+
+    expect(output).toContain("message: 'Hello from wiremd'");
+    expect(output).toContain("topic: 'support'");
+    expect(output).toContain("contactMethod: 'email'");
+    expect(output).toContain('v-model="formState.contactMethod"');
+  });
+
   it('supports Options API, plain JavaScript, and unscoped styles through the universal renderer', () => {
-    const output = render(createFrameworkRendererAst(), {
+    const output = render(parse(createFrameworkRendererMarkdown()), {
       format: 'vue',
       rendererOptions: {
         componentName: 'SettingsPanel',
@@ -54,15 +63,112 @@ describe('Vue Renderer', () => {
     expect(output).not.toContain('<style scoped>');
   });
 
-  it('renders Vue-specific state blocks for empty and error states', () => {
-    const output = renderToVue(createVueStateAst());
+  it('derives Vue bindings from parsed markdown instead of only fixture ASTs', () => {
+    const ast = parse(`
+## Profile settings
 
-    expect(output).toContain('class="wmd-state-block"');
-    expect(output).toContain('data-icon="search"');
+[Email___]{type:email required}
+- [x] Accept terms
+
+[Submit]*
+    `.trim());
+
+    const output = renderToVue(ast, {
+      componentName: 'ParsedVue',
+    });
+
+    expect(output).toContain("email: ''");
+    expect(output).toContain('acceptTerms: true');
+    expect(output).toContain('v-model="formState.email"');
+    expect(output).toContain('type="email"');
+    expect(output).toContain('v-model="formState.acceptTerms"');
+    expect(output).toContain('type="submit"');
+  });
+
+  it('renders complex parsed markdown into Vue bindings across nav, form, table, and grid surfaces', () => {
+    const ast = parse(createFrameworkRendererMarkdown());
+
+    const output = renderToVue(ast, {
+      componentName: 'ParsedComplexVue',
+    });
+
+    expect(output).toContain('<nav class="wmd-nav">');
+    expect(output).toContain('acceptTerms: true');
+    expect(output).toMatch(/radiogroup\d+: 'Email'/);
+    expect(output).toContain('type="email"');
+    expect(output).toContain('<textarea');
+    expect(output).toContain('<select');
+    expect(output).toContain('v-model="formState.acceptTerms"');
+    expect(output).toMatch(/v-model=\"formState\.radiogroup\d+\"/);
+    expect(output).toContain('<option value="Sales">Sales</option>');
+    expect(output).toContain('<option value="Support">Support</option>');
+    expect(output).toContain('style="--grid-columns: 2"');
+    expect(output).toContain('<table class="wmd-table">');
+    expect(output).toContain('type="submit"');
+    expect(output).toContain(`@click="handleButtonClick('Cancel')"`);
+  });
+
+  it('renders Vue-specific state blocks for empty and error states', () => {
+    const output = renderToVue(parse(`
+::: empty-state
+No records
+Try another filter
+:::
+
+::: error-state
+Load failed
+Refresh the page and retry
+:::
+    `.trim()));
+
+    expect(output).toContain('wmd-state-block');
+    expect(output).toContain('wmd-container-empty-state');
     expect(output).toContain('No records');
     expect(output).toContain('Try another filter');
-    expect(output).toContain('data-icon="error"');
+    expect(output).toContain('wmd-container-error-state');
     expect(output).toContain('Load failed');
     expect(output).toContain('Refresh the page and retry');
+  });
+
+  it('supports placeholders, responsive grid classes, viewport blocks, and annotation visibility', () => {
+    const ast = parse(`
+## Welcome {{user.name}}
+
+## Features {.grid-3 .md:grid-2}
+### A
+### B
+### C
+
+::: mobile
+[Submit] <!-- VUE-ANNOTATION-XYZ -->
+:::
+
+::: note
+VUE-NOTE-XYZ
+:::
+    `.trim());
+
+    const hidden = renderToVue(ast, { componentName: 'AuditVue', placeholderSeed: 'vue-seed' });
+    const visible = renderToVue(ast, {
+      componentName: 'AuditVue',
+      placeholderSeed: 'vue-seed',
+      showAnnotations: true,
+    });
+    const preserved = renderToVue(ast, {
+      componentName: 'AuditVue',
+      resolvePlaceholders: false,
+    });
+
+    expect(hidden).toContain('wmd-grid-md-2');
+    expect(hidden).toContain('wmd-viewport-mobile');
+    expect(hidden).not.toContain('{{user.name}}');
+    expect(hidden).not.toContain('VUE-ANNOTATION-XYZ');
+    expect(hidden).not.toContain('VUE-NOTE-XYZ');
+
+    expect(visible).toContain('VUE-ANNOTATION-XYZ');
+    expect(visible).toContain('wmd-annotation-callout');
+    expect(visible).toContain('VUE-NOTE-XYZ');
+
+    expect(preserved).toContain('{{user.name}}');
   });
 });

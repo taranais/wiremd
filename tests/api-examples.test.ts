@@ -6,6 +6,25 @@ import type { WiremdNode } from '../src/types.js';
  * Tests for API examples from the documentation
  * Ensures all documented examples work correctly
  */
+function visitNodes(nodes: WiremdNode[], visitor: (node: WiremdNode) => void): void {
+  for (const node of nodes) {
+    visitor(node);
+    if ('children' in node && Array.isArray(node.children)) {
+      visitNodes(node.children, visitor);
+    }
+  }
+}
+
+function collectNodesOfType<T extends WiremdNode['type']>(nodes: WiremdNode[], type: T): Array<Extract<WiremdNode, { type: T }>> {
+  const matches: Array<Extract<WiremdNode, { type: T }>> = [];
+  visitNodes(nodes, (node) => {
+    if (node.type === type) {
+      matches.push(node as Extract<WiremdNode, { type: T }>);
+    }
+  });
+  return matches;
+}
+
 describe('API Examples from Documentation', () => {
   describe('Parser API Examples', () => {
     it('should parse basic example from docs', () => {
@@ -22,7 +41,21 @@ Email
       `);
 
       expect(ast.type).toBe('document');
-      expect(ast.children.length).toBeGreaterThan(0);
+      expect(ast.children[0]).toMatchObject({
+        type: 'heading',
+        level: 2,
+        content: 'Contact Form',
+      });
+
+      const inputs = collectNodesOfType(ast.children, 'input');
+      expect(inputs).toHaveLength(2);
+      expect(inputs[0].props.required).toBe(true);
+      expect(inputs[1].props.type).toBe('email');
+      expect(inputs[1].props.required).toBe(true);
+
+      const buttons = collectNodesOfType(ast.children, 'button');
+      expect(buttons.map((button) => button.content)).toEqual(['Submit', 'Cancel']);
+      expect(buttons[0].props.classes).toContain('primary');
     });
 
     it('should parse with position information', () => {
@@ -31,6 +64,9 @@ Email
 [Button]
       `, { position: true });
 
+      expect(ast.position?.start.line).toBeGreaterThan(0);
+      expect(ast.children[0].position?.start.line).toBeGreaterThan(0);
+      expect(ast.children[1].position?.start.line).toBeGreaterThan(0);
       ast.children.forEach(node => {
         if (node.position) {
           expect(node.position.start.line).toBeGreaterThan(0);
@@ -39,14 +75,13 @@ Email
     });
 
     it('should parse with validation', () => {
-      expect(() => {
-        const ast = parse(`
+      const ast = parse(`
 ## My Wireframe
 [Button]
         `, { validate: true });
 
-        expect(ast).toBeDefined();
-      }).not.toThrow();
+      expect(ast.type).toBe('document');
+      expect(validate(ast)).toEqual([]);
     });
 
     it('should extract metadata', () => {
@@ -55,17 +90,28 @@ Email
 This is a description
       `);
 
-      expect(ast.meta).toBeDefined();
-      expect(ast.version).toBe('0.1');
+      expect(ast.meta).toEqual(expect.objectContaining({
+        version: '0.2',
+        viewport: 'desktop',
+        theme: 'sketch',
+      }));
+      expect(ast.version).toBe('0.2');
+      expect(ast.children[0]).toMatchObject({
+        type: 'heading',
+        content: 'My Wireframe',
+      });
+      expect(ast.children[1]).toMatchObject({
+        type: 'paragraph',
+        content: 'This is a description',
+      });
     });
 
     it('should count node types', () => {
       const ast = parse(`
 ## Dashboard
 
-[Search...]{type:search}
+[Search___]{type:search}
 
-> Grid(3)
 [Card 1]
 [Card 2]
 [Card 3]
@@ -87,8 +133,11 @@ This is a description
       }
 
       const counts = countNodeTypes(ast.children);
-      expect(counts).toBeDefined();
-      expect(Object.keys(counts).length).toBeGreaterThan(0);
+      expect(counts).toEqual(expect.objectContaining({
+        heading: 1,
+        input: 1,
+        button: 3,
+      }));
     });
   });
 
@@ -100,25 +149,23 @@ This is a description
       `);
 
       const errors = validate(ast);
-      expect(errors.length).toBe(0);
+      expect(errors).toEqual([]);
     });
 
     it('should collect validation errors', () => {
-      const ast = parse(`
-## Contact Form
-[Submit]
-      `);
+      const invalidAst = {
+        type: 'document',
+        version: '0.2',
+        meta: {},
+        children: [{ type: 'invalid-component' }],
+      } as any;
 
-      const errors = validate(ast);
-
-      if (errors.length === 0) {
-        expect(true).toBe(true); // Valid
-      } else {
-        errors.forEach(error => {
-          expect(error.message).toBeDefined();
-          expect(typeof error.message).toBe('string');
-        });
-      }
+      const errors = validate(invalidAst);
+      expect(errors.length).toBeGreaterThan(0);
+      expect(errors[0]).toEqual(expect.objectContaining({
+        code: 'INVALID_COMPONENT_TYPE',
+      }));
+      expect(typeof errors[0].message).toBe('string');
     });
 
     it('should validate before rendering', () => {
@@ -136,6 +183,8 @@ This is a description
 
       const html = renderToHTML(ast);
       expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('<button');
+      expect(html).toContain('Contact Form');
     });
   });
 
@@ -170,7 +219,9 @@ This is a description
         style: 'clean'
       });
 
-      expect(html).toContain('my-app-');
+      expect(html).toContain('my-app-h2');
+      expect(html).toContain('my-app-button');
+      expect(html).not.toContain('class="wmd-button');
     });
 
     it('should render minified HTML', () => {
@@ -182,17 +233,24 @@ This is a description
       });
 
       expect(html).not.toMatch(/\n\s+/);
+      expect(html).toContain('<button');
     });
 
     it('should render to JSON', () => {
       const ast = parse(`## Login\n[Button]`);
 
       const json = renderToJSON(ast);
-      expect(json).toContain('"type"');
-      expect(json).toContain('"document"');
 
       const parsed = JSON.parse(json);
       expect(parsed.type).toBe('document');
+      expect(parsed.children[0]).toMatchObject({
+        type: 'heading',
+        content: 'Login',
+      });
+      expect(parsed.children[1]).toMatchObject({
+        type: 'button',
+        content: 'Button',
+      });
     });
 
     it('should render pretty vs minified JSON', () => {
@@ -204,6 +262,7 @@ This is a description
 
       const minified = renderToJSON(ast, { pretty: false });
       expect(minified).not.toContain('\n  ');
+      expect(JSON.parse(pretty)).toEqual(JSON.parse(minified));
     });
 
     it('should render to React component', () => {
@@ -225,6 +284,9 @@ Password
       expect(component).toContain('export const');
       expect(component).toContain('return (');
       expect(component).toContain('className');
+      expect(component).toContain('Login Form');
+      expect(component).toContain('type="password"');
+      expect(component).toContain('Login');
     });
 
     it('should render React TypeScript vs JavaScript', () => {
@@ -256,6 +318,8 @@ Page views: 1,234
       const html = renderToTailwind(ast);
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('tailwindcss');
+      expect(html).toContain('Analytics');
+      expect(html).toContain('View Details');
     });
   });
 
@@ -276,12 +340,14 @@ Email
       // Parse
       const ast = parse(markdown, { position: true });
       expect(ast.type).toBe('document');
+      expect(ast.children[0]).toMatchObject({
+        type: 'heading',
+        content: 'Contact Form',
+      });
 
       // Validate
       const errors = validate(ast);
-      if (errors.length > 0) {
-        throw new Error(`Validation failed: ${errors.map(e => e.message).join(', ')}`);
-      }
+      expect(errors).toEqual([]);
 
       // Render
       const html = renderToHTML(ast, {
@@ -292,6 +358,8 @@ Email
       expect(html).toContain('<!DOCTYPE html>');
       expect(html).toContain('Contact Form');
       expect(html).toContain('required');
+      expect(html).toContain('type="email"');
+      expect(html).toContain('Submit');
     });
 
     it('should generate multiple output formats', () => {
@@ -300,12 +368,17 @@ Email
 
       const html = renderToHTML(ast, { style: 'sketch' });
       expect(html).toContain('<!DOCTYPE html>');
+      expect(html).toContain('Submit');
 
       const react = renderToReact(ast, { typescript: true });
       expect(react).toContain('import React');
+      expect(react).toContain('Submit');
 
       const json = renderToJSON(ast, { pretty: true });
-      expect(json).toContain('"type"');
+      expect(JSON.parse(json).children[1]).toMatchObject({
+        type: 'button',
+        content: 'Submit',
+      });
     });
 
     it('should manipulate AST', () => {
@@ -318,10 +391,11 @@ Email
         props: {}
       });
 
-      expect(ast.children.length).toBeGreaterThan(2);
+      expect(ast.children).toHaveLength(3);
 
       const html = renderToHTML(ast);
       expect(html).toContain('Added programmatically');
+      expect(html).toContain('Form');
     });
 
     it('should traverse and modify AST', () => {
@@ -410,6 +484,13 @@ Email
       const result = parseUserInput('## Valid');
       expect(result.success).toBe(true);
       expect(result.ast).not.toBeNull();
+      expect(result.ast?.children[0]).toMatchObject({
+        type: 'heading',
+        content: 'Valid',
+      });
+
+      const invalid = parseUserInput('## Welcome {{user.phone}}');
+      expect(invalid.success).toBe(true);
     });
 
     it('should use comprehensive error handler', () => {
@@ -458,7 +539,7 @@ Email
 
       const result = renderSafely('## Title\n[Button]');
       expect(result.success).toBe(true);
-      expect(result.html).toBeDefined();
+      expect(result.html).toContain('<button');
     });
   });
 
@@ -521,8 +602,8 @@ Name
 
       ast.children.forEach(process);
 
-      expect(requiredFields.length).toBeGreaterThan(0);
-      expect(primaryButtons).toContain('Submit');
+      expect(requiredFields).toEqual(['input']);
+      expect(primaryButtons).toEqual(['Submit']);
     });
   });
 });

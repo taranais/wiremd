@@ -1,12 +1,12 @@
 # Conformance Test Plan
 
-**Specification Version:** v0.1  
+**Specification Version:** v0.2  
 **Scope:** Parser and AST conformance in `tests/conformance/`  
 **Primary Goal:** Define why conformance testing exists and how it is implemented and enforced.
 
 ## 1. Why Conformance Exists
 
-Conformance testing ensures wiremd behavior follows `SYNTAX-SPEC-v0.1.md` rather than incidental implementation details.
+Conformance testing ensures wiremd behavior follows `SYNTAX-SPEC-v0.2.md` rather than incidental implementation details.
 
 ### 1.1 Prevent Spec Drift
 
@@ -54,18 +54,34 @@ Conformance is split by specification domains:
 - containers,
 - layouts,
 - attributes,
-- special patterns and states.
+- special patterns and states,
+- markdown native elements,
+- AST contract and ambiguity rules.
 
 ## 3. Detailed Suite Map
 
 | Phase | File | Spec Focus | Main Validation Targets |
 |------|------|------------|--------------------------|
 | 0 | `tests/conformance/01-document-structure.test.ts` | Sections 1, 11 | root shape (`document`), `version`, `meta`, `children`, baseline node contract |
-| 1 | `tests/conformance/02-components.test.ts` | Section 2, 10.1, 10.2 | buttons, links (`href`), inputs (`props.type`), textarea, select/options, radios, checkboxes, icons |
+| 1 | `tests/conformance/02-components.test.ts` | Section 2, 10.1, 10.2 | buttons, links (`href`), inputs (`props.type`, `disabled`, `value`, `pattern`), textarea, select/options, radios, radio-groups, checkboxes, icons |
 | 2 | `tests/conformance/03-containers.test.ts` | Section 3 | generic containers, attributes, nesting, inline containers (`nav`) |
-| 3 | `tests/conformance/04-layouts.test.ts` | Section 4 | grid transforms (`.grid-N`, `.grid-auto`), sidebar/main layout behavior |
-| 4 | `tests/conformance/05-attributes.test.ts` | Section 5, 10.4 | class attrs, key-values, states, combined attrs, placement rules |
-| 5 | `tests/conformance/06-special-patterns.test.ts` | Sections 7, 8 | breadcrumbs, tabs, badges, loading/empty/error states, state attrs |
+| 3 | `tests/conformance/04-layouts.test.ts` | Sections 4.1-4.3 | grid transforms, responsive breakpoint metadata, viewport blocks, sidebar/main layout behavior |
+| 4 | `tests/conformance/05-attributes.test.ts` | Sections 5.1-5.6, 10.4 | class attrs, key-values, states, combined attrs, annotations/comments, placeholders, placement rules |
+| 5 | `tests/conformance/06-special-patterns.test.ts` | Sections 7.2-7.4, 8.1-8.5 | breadcrumbs, tabs, badges, state attrs, state blocks, loading/empty/error-state recognition |
+| 6 | `tests/conformance/07-native-markdown.test.ts` | Section 6 | headings, lists, tables, blockquotes, separators, images |
+| 7 | `tests/conformance/08-ast-contracts.test.ts` | Sections 7.1, 10.3, 11.2, 11.4 | nav-bar contract, raw HTML ambiguity, canonical node fields, responsive/annotation metadata |
+
+## 3.1 Coverage Status Against `SYNTAX-SPEC-v0.2.md`
+
+As of 2026-03-17, the current files in `tests/conformance/` provide explicit parser/AST coverage for all normative syntax and ambiguity sections defined in `SYNTAX-SPEC-v0.2.md`.
+
+| Coverage Area | Status | Notes |
+|---------------|--------|-------|
+| Sections 1-8 | Covered | Syntax patterns and state semantics are explicitly mapped to executable tests |
+| Section 10 | Covered | Ambiguity rules for button/link, input/code, container/HTML, and attribute placement are covered |
+| Section 11 | Covered | Document shape, representative node fields, responsive metadata, annotations, and position-enabled parsing are asserted |
+
+Sections 9 and 12 are reference/example sections and are not treated as standalone conformance obligations unless they introduce normative behavior not already covered elsewhere.
 
 ## 4. Case Design Rules
 
@@ -86,7 +102,7 @@ Avoid:
 
 A change is conformance-safe only when:
 
-1. `npx vitest run tests/conformance` passes.
+1. `WIREMD_TEST_SCOPE=full npx vitest run tests/conformance --config vitest.config.ts` passes.
 2. New syntax behavior includes matching conformance tests.
 3. Existing conformance tests are not weakened to preserve compatibility with invalid outputs.
 4. Spec changes are reflected by conformance updates in the same PR.
@@ -96,13 +112,13 @@ A change is conformance-safe only when:
 Run all conformance suites:
 
 ```bash
-npx vitest run tests/conformance
+WIREMD_TEST_SCOPE=full npx vitest run tests/conformance --config vitest.config.ts
 ```
 
 Run an individual suite:
 
 ```bash
-npx vitest run tests/conformance/02-components.test.ts
+WIREMD_TEST_SCOPE=full npx vitest run tests/conformance/02-components.test.ts --config vitest.config.ts
 ```
 
 ## 7. Exit Criteria
@@ -147,9 +163,9 @@ This plan is successful when:
 | 2.3 | Textarea | `[Message...]{rows:5}` | Type: `textarea`, `rows: 5` |
 | 2.3 | Textarea (Visual) | multiline bracket pattern | Type: `textarea` |
 | 2.4 | Select/Dropdown | `[Select___v]` | Type: `select` |
-| 2.4 | Select Options | Select followed by list | Children include options |
+| 2.4 | Select Options | Select followed by list | `options` array is populated correctly |
 | 2.5 | Radio Buttons | `( ) Opt`, `(•) Opt`, `(x) Opt` | Type: `radio`, selected mapping |
-| 2.5 | Radio Groups | Consecutive radio lines | Group semantics validated |
+| 2.5 | Radio Groups | Consecutive radio lines | Consecutive radio items normalize into `radio-group` |
 | 2.6 | Checkboxes | `- [ ]`, `- [x]` | Standard markdown checklist |
 | 2.7 | Icons | `:icon-name:` | Type: `icon`, name set |
 | 10.2 | Input vs Code | `[___]` vs `` `code` `` | Distinct AST types |
@@ -167,7 +183,7 @@ This plan is successful when:
 | 3.2 | Nav Bar | `[[ ... ]]{.nav}` | Class: `nav` |
 | 3.2 | Malformed Inline | `[[ A \| B ]` | Must not parse as valid inline container |
 
-### Phase 3: Layouts (Section 4)
+### Phase 3: Layouts (Sections 4.1-4.3)
 
 **File:** `tests/conformance/04-layouts.test.ts`
 
@@ -175,9 +191,11 @@ This plan is successful when:
 |---------|---------|---------------|---------------------|
 | 4.1 | Grid Layout | `## Title {.grid-3}` | Grid with H3 item grouping |
 | 4.1 | Grid Auto | `## Title {.grid-auto}` | Grid layout recognized |
-| 4.2 | Sidebar Layout | `::: layout` + inner headings | Sidebar/main mapping validated |
+| 4.1 | Responsive Grid Metadata | `.xs:grid-*`, `.md:grid-*` | `props.responsive.gridColumns` is populated canonically |
+| 4.2 | Viewport Blocks | `::: mobile`, `::: desktop` | `props.responsive.visibleIn` and viewport classes are populated |
+| 4.3 | Sidebar Layout | `::: layout` + inner headings | Sidebar/main mapping validated |
 
-### Phase 4: Attributes and Parsing Rules (Section 5)
+### Phase 4: Attributes and Parsing Rules (Sections 5.1-5.6 and 10.4)
 
 **File:** `tests/conformance/05-attributes.test.ts`
 
@@ -187,10 +205,15 @@ This plan is successful when:
 | 5.2 | Key-Value | `{k:v k2:"v 2"}` | Attributes object |
 | 5.3 | States | `{:disabled}` | State property |
 | 5.4 | Combined | `{.cls key:val :state}` | All properties populated |
+| 5.5 | Annotation Metadata | `.annotation`, `todo`, `version-note` | `props.annotations` normalization |
+| 5.5 | HTML Comment Annotation | `[Btn] <!-- note -->` | Comment captured as annotation metadata |
+| 5.5 | Note Blocks | `::: note` | Annotation-oriented section container behavior |
+| 5.6 | Placeholder Preservation | `{{user.name}}`, `{{number:...}}` | Placeholders preserved in text fields |
+| 5.6 | Strict Placeholder Validation | invalid `{{...` / unsupported placeholder | Strict parse rejects invalid placeholder syntax |
 | 10.4 | Attr Placement | `[Btn] {.cls}` vs `[Btn]{.cls}` | Both apply correctly |
 | 10.4 | Standalone Attr Block | `{.class}` after block | Applies to preceding block |
 
-### Phase 5: Special Patterns (Sections 7 and 8)
+### Phase 5: Special Patterns (Sections 7.2-7.4 and 8.1-8.5)
 
 **File:** `tests/conformance/06-special-patterns.test.ts`
 
@@ -199,10 +222,38 @@ This plan is successful when:
 | 7.2 | Breadcrumbs | `Home > Page` | Type: `breadcrumbs` |
 | 7.3 | Tabs | `[Tab]* \| Tab2` | Type: `tabs`, selected index correct |
 | 7.4 | Badges | Inline code contexts | Type: `badge` |
-| 8.x | Loading State | `::: loading` | Type: `loading-state` |
-| 8.x | Empty State | `::: empty-state` | Type: `empty-state` |
-| 8.x | Error State | `::: error-state` | Type: `error-state` |
-| 8.1 | Component state attrs | `[Button]{:loading}` | `props.state=loading` |
+| 8.1 | Component state attrs | `[Button]{:loading}` | `props.state=loading` on representative stateful components |
+| 8.1 | Success State | `[Button]{:success}` | `props.state=success` is preserved canonically |
+| 8.1 | Multiple states | `[Button]{:hover :active :focus :warning}` | `props.state` and `props.states` stay aligned |
+| 8.2 | State Blocks | `::: state=hover` | Container state and inherited child state |
+| 8.3 | Loading State | `::: loading-state` | Canonical node recognition plus normalized `message` and body semantics |
+| 8.4 | Empty State | `::: empty-state` | Canonical `icon`, `title`, and action/body grouping |
+| 8.5 | Error State | `::: error-state` | Canonical `icon`, `title`, and action/body grouping |
+
+### Phase 6: Markdown Native Elements (Section 6)
+
+**File:** `tests/conformance/07-native-markdown.test.ts`
+
+| Spec ID | Feature | Input Pattern | Validation Criteria |
+|---------|---------|---------------|---------------------|
+| 6.1 | Headings | `#`, `##`, `###` | Correct heading levels and classes |
+| 6.2 | Lists | `-` and `1.` items | Ordered/unordered list semantics |
+| 6.3 | Tables | pipe table + trailing attrs | Header/row/cell structure and table attrs |
+| 6.4 | Blockquotes | `>` lines + trailing attrs | Blockquote node and blockquote attrs |
+| 6.5 | Horizontal Rules | `---` | Separator node |
+| 6.6 | Images | `![alt](src){.class}` | Image node shape and attrs |
+
+### Phase 7: AST Contract and Ambiguity (Sections 7.1, 10.3, 11.2, 11.4)
+
+**File:** `tests/conformance/08-ast-contracts.test.ts`
+
+| Spec ID | Feature | Input Pattern | Validation Criteria |
+|---------|---------|---------------|---------------------|
+| 7.1 | Navigation Bars | `[[ :logo: Brand | ... ]]{.nav}` | `nav` shape, brand/nav-item/button roles |
+| 10.3 | Container vs HTML | raw `<div>` plus `:::` container | HTML preserved literally, container stays wiremd-specific |
+| 11.2 | Canonical Node Fields | mixed representative nodes | `type`, `props`, `children`, `content`, and `position` are present in expected slots when enabled |
+| 11.4 | Responsive Metadata | grid with responsive classes | `props.responsive.gridColumns` canonical shape |
+| 11.4 | Annotation Metadata | inline HTML comment on component | normalized `props.annotations` metadata |
 
 ## 9. Motivation and Governance Context
 
@@ -223,4 +274,4 @@ Governance expectations for contributors and reviewers:
 
 ## 10. Related Document
 
-- Formal syntax spec: [SYNTAX-SPEC-v0.1.md](../../SYNTAX-SPEC-v0.1.md)
+- Formal syntax spec: [SYNTAX-SPEC-v0.2.md](../../SYNTAX-SPEC-v0.2.md)

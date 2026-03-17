@@ -42,9 +42,53 @@ Text`);
       const grid = ast.children.find((n: any) => n.type === 'grid');
       expect(grid).toBeDefined();
     });
+
+    it('captures breakpoint-specific responsive grid metadata', () => {
+      const ast = getDocument(`## Features {.grid-3 .xs:grid-1 .md:grid-2}
+### Feature 1
+Content 1
+### Feature 2
+Content 2
+### Feature 3
+Content 3`);
+
+      const grid = ast.children.find((n: any) => n.type === 'grid');
+      expect(grid).toBeDefined();
+      expect(grid.props?.responsive?.gridColumns).toEqual({
+        xs: 1,
+        md: 2,
+      });
+      expect(grid.props?.classes).toEqual(expect.arrayContaining(['grid-3', 'xs:grid-1', 'md:grid-2']));
+    });
   });
 
-  describe('4.2 Sidebar + Main Layout', () => {
+  describe('4.2 Viewport Blocks', () => {
+    it('parses mobile viewport blocks into responsive visibleIn metadata', () => {
+      const ast = getDocument(`::: mobile
+## Features {.grid-1}
+:::`);
+
+      const section = ast.children[0];
+      expect(section).toMatchObject({
+        type: 'container',
+        containerType: 'section',
+      });
+      expect(section.props?.responsive?.visibleIn).toEqual(['mobile']);
+      expect(section.props?.classes).toContain('viewport-mobile');
+    });
+
+    it('parses desktop viewport blocks into responsive visibleIn metadata', () => {
+      const ast = getDocument(`::: desktop
+## Features {.grid-3}
+:::`);
+
+      const section = ast.children[0];
+      expect(section.props?.responsive?.visibleIn).toEqual(['desktop']);
+      expect(section.props?.classes).toContain('viewport-desktop');
+    });
+  });
+
+  describe('4.3 Sidebar + Main Layout', () => {
     it('parses layout container with .sidebar-main and sidebar/main child regions', () => {
       const ast = getDocument(`::: layout {.sidebar-main}
 ## Sidebar {.sidebar}

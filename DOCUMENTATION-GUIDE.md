@@ -33,7 +33,7 @@ User-friendly walkthrough with best practices, tips, and tricks. Less comprehens
 ---
 
 ### 🔧 I'm implementing a parser/renderer
-**Study:** [Syntax Specification](SYNTAX-SPEC-v0.1.md)
+**Study:** [Syntax Specification](SYNTAX-SPEC-v0.2.md)
 
 Formal technical specification with parser rules, JSON schema, AST structure, and implementation notes.
 
@@ -63,7 +63,8 @@ Step-by-step setup and first steps with the CLI tool.
 
 | Document | Purpose | Best For |
 |----------|---------|----------|
-| **[SYNTAX-SPEC-v0.1.md](SYNTAX-SPEC-v0.1.md)** | Formal specification | Parser implementation |
+| **[SYNTAX-SPEC-v0.2.md](SYNTAX-SPEC-v0.2.md)** | Current formal specification | Parser implementation |
+| **[SYNTAX-SPEC-v0.1.md](SYNTAX-SPEC-v0.1.md)** | Historical v0.1 baseline | Compatibility and spec history |
 | **[CLAUDE.md](CLAUDE.md)** | Project overview for AI assistants | Understanding architecture |
 | **[CONTRIBUTING.md](CONTRIBUTING.md)** | Contribution guidelines | Contributing code |
 | **[TESTING.md](TESTING.md)** | Testing strategy and guidelines | Writing tests |
@@ -105,7 +106,7 @@ Step-by-step setup and first steps with the CLI tool.
 
 ### Scenario: "I'm building a parser for wiremd"
 
-1. Read [SYNTAX-SPEC-v0.1.md](SYNTAX-SPEC-v0.1.md) thoroughly
+1. Read [SYNTAX-SPEC-v0.2.md](SYNTAX-SPEC-v0.2.md) thoroughly
 2. Study the parser implementation in `src/parser/`
 3. Review test cases in `tests/`
 4. Check [CLAUDE.md](CLAUDE.md) for architecture overview
@@ -184,7 +185,7 @@ Based on your role:
 - **Designer/User:** Start with [Syntax Showcase](examples/showcase.md)
 - **Developer/Integrator:** Read [Getting Started](docs/guide/getting-started.md), then [API Docs](docs/api/README.md)
 - **Contributor:** Read [CONTRIBUTING.md](CONTRIBUTING.md)
-- **Parser Developer:** Study [SYNTAX-SPEC-v0.1.md](SYNTAX-SPEC-v0.1.md)
+- **Parser Developer:** Study [SYNTAX-SPEC-v0.2.md](SYNTAX-SPEC-v0.2.md)
 
 ---
 

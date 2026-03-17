@@ -342,7 +342,7 @@ HTML export is fully supported. React/Vue/Svelte component exports are in develo
 
 ### How do I create tabs or accordions?
 
-Tabs and accordions are planned but not yet implemented in v0.1. See [SYNTAX-SPEC-v0.1.md](SYNTAX-SPEC-v0.1.md#16-version-01-scope) for the roadmap.
+The original v0.1 roadmap is preserved in [SYNTAX-SPEC-v0.1.md](SYNTAX-SPEC-v0.1.md#16-version-01-scope). The current maintained specification is [SYNTAX-SPEC-v0.2.md](SYNTAX-SPEC-v0.2.md).
 
 ### Can I add custom JavaScript interactions?
 
@@ -406,7 +406,7 @@ When something isn't working, check:
 
 ### Where is the complete syntax specification?
 
-See [SYNTAX-SPEC-v0.1.md](SYNTAX-SPEC-v0.1.md) for the formal specification including parser rules and JSON schema.
+See [SYNTAX-SPEC-v0.2.md](SYNTAX-SPEC-v0.2.md) for the formal specification including parser rules and JSON schema.
 
 ### How do I report a bug?
 

@@ -449,7 +449,7 @@ const customArtifacts = renderArtifacts(ast, { format: 'fixture' });
 
 | Document | Description |
 |----------|-------------|
-| **[Syntax Specification](./SYNTAX-SPEC-v0.1.md)** | Formal specification with parser rules |
+| **[Syntax Specification](./SYNTAX-SPEC-v0.2.md)** | Formal specification with parser rules |
 | **[API Documentation (Local)](./docs/api/index.md)** | Local API reference |
 | **[Project Plan](./.github/dev-docs/markdown-mockup-project-plan.md)** | Development roadmap |
 | **[CLAUDE.md](./.github/dev-docs/CLAUDE.md)** | Project overview for AI assistants |

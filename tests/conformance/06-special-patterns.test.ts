@@ -61,28 +61,80 @@ describe('Spec 7 & 8: Special Patterns & States', () => {
   });
 
   describe('8.x Component States', () => {
-    it('parses loading state container as loading-state node', () => {
-      const node = getRoot('::: loading\n:spinner: Loading...\nPlease wait\n:::');
+    it('parses canonical loading-state container as loading-state node', () => {
+      const node = getRoot('::: loading-state\n:spinner: Loading...\nPlease wait while we process your request.\n:::');
       expect(node.type).toBe('loading-state');
+      expect(node.message).toBe('Loading...');
+      expect(Array.isArray(node.children)).toBe(true);
+      expect(node.children).toHaveLength(1);
+      expect(node.children[0]).toMatchObject({
+        type: 'paragraph',
+        content: 'Please wait while we process your request.',
+      });
     });
 
     it('parses empty state container as empty-state node', () => {
-      const node = getRoot('::: empty-state\n:empty-box:\n## No items found\n:::');
+      const node = getRoot('::: empty-state\n:empty-box:\n## No items found\nGet started by creating your first item\n[Create Item]{.primary}\n:::');
       expect(node.type).toBe('empty-state');
+      expect(node.icon).toBe('empty-box');
+      expect(node.title).toBe('No items found');
+      expect(
+        node.children.some((child: any) =>
+          child.type === 'container'
+          && child.children?.some((nested: any) => nested.type === 'button' && nested.content === 'Create Item'),
+        ),
+      ).toBe(true);
     });
 
     it('parses error state container as error-state node', () => {
-      const node = getRoot('::: error-state\n:warning:\n## Something went wrong\n:::');
+      const node = getRoot('::: error-state\n:warning:\n## Something went wrong\nWe could not load this page\n[Retry]{.primary}\n:::');
       expect(node.type).toBe('error-state');
+      expect(node.icon).toBe('warning');
+      expect(node.title).toBe('Something went wrong');
+      expect(
+        node.children.some((child: any) =>
+          child.type === 'container'
+          && child.children?.some((nested: any) => nested.type === 'button' && nested.content === 'Retry'),
+        ),
+      ).toBe(true);
     });
 
     it('parses state attributes on components', () => {
       const loadingBtn = getRoot('[Submit]{:loading}');
       const errorBtn = getRoot('[Retry]{:error}');
+      const successBtn = getRoot('[Done]{:success}');
       expect(loadingBtn.type).toBe('button');
       expect(loadingBtn.props?.state).toBe('loading');
       expect(errorBtn.type).toBe('button');
       expect(errorBtn.props?.state).toBe('error');
+      expect(successBtn.type).toBe('button');
+      expect(successBtn.props?.state).toBe('success');
+    });
+
+    it('preserves multiple component states while keeping the latest state as primary', () => {
+      const button = getRoot('[Submit]{:hover :active :focus :warning}');
+
+      expect(button.type).toBe('button');
+      expect(button.props?.state).toBe('warning');
+      expect(button.props?.states).toEqual(['hover', 'active', 'focus', 'warning']);
+    });
+
+    it('parses state blocks and applies state to child components', () => {
+      const node = getRoot('::: state=hover\n[Submit]\n:::');
+
+      expect(node).toMatchObject({
+        type: 'container',
+        containerType: 'section',
+        props: {
+          state: 'hover',
+        },
+      });
+      expect(node.children?.[0]).toMatchObject({
+        type: 'button',
+        props: {
+          state: 'hover',
+        },
+      });
     });
   });
 });

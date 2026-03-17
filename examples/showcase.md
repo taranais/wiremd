@@ -51,7 +51,7 @@ Welcome to the comprehensive wiremd syntax guide! This document serves as both a
 - [Quick Reference](../QUICK-REFERENCE.md) - One-page syntax cheat sheet
 - [FAQ](../FAQ.md) - Common questions and troubleshooting
 - [Syntax Guide](../docs/guide/syntax.md) - User-friendly guide
-- [Formal Specification](../SYNTAX-SPEC-v0.1.md) - Technical specification
+- [Formal Specification](../SYNTAX-SPEC-v0.2.md) - Technical specification
 
 ---
 

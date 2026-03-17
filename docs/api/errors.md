@@ -244,7 +244,7 @@ function parseWithFallback(markdown: string): DocumentNode {
     // Return minimal valid document
     return {
       type: 'document',
-      version: '0.1',
+      version: '0.2',
       meta: {},
       children: []
     };
@@ -564,7 +564,7 @@ describe('Error Handling', () => {
   it('should validate AST structure', () => {
     const invalidAST = {
       type: 'document',
-      version: '0.1',
+      version: '0.2',
       meta: {},
       children: [
         // @ts-expect-error - Testing invalid node

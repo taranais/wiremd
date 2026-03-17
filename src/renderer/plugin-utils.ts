@@ -87,26 +87,144 @@ export function repeatString(str: string, count: number): string {
 }
 
 export function buildPrefixedClasses(prefix: string, baseClass: string, props: Record<string, unknown>): string {
-  const classes = [`${prefix}${baseClass}`];
+  const classes = new Set<string>([`${prefix}${baseClass}`]);
   const classNames = props.classes;
 
   if (Array.isArray(classNames)) {
     classNames.forEach((className) => {
-      if (typeof className === 'string' && className) {
-        classes.push(`${prefix}${className}`);
+      if (typeof className === 'string' && className && !shouldSkipPrefixedClass(baseClass, className)) {
+        classes.add(`${prefix}${className}`);
       }
     });
   }
 
   if (typeof props.variant === 'string' && props.variant) {
-    classes.push(`${prefix}${baseClass}-${props.variant}`);
+    classes.add(`${prefix}${baseClass}-${props.variant}`);
   }
 
-  if (typeof props.state === 'string' && props.state) {
-    classes.push(`${prefix}state-${props.state}`);
+  getStates(props).forEach((state) => {
+    classes.add(`${prefix}state-${state}`);
+  });
+
+  const responsive = props.responsive;
+  if (responsive && typeof responsive === 'object') {
+    const visibleIn = (responsive as { visibleIn?: unknown }).visibleIn;
+    if (Array.isArray(visibleIn)) {
+      visibleIn.forEach((viewport) => {
+        if (typeof viewport === 'string' && viewport.trim()) {
+          classes.add(`${prefix}viewport-${viewport.trim()}`);
+        }
+      });
+    }
   }
+
+  return Array.from(classes).join(' ');
+}
+
+export function getStates(props: Record<string, unknown>): string[] {
+  const states: string[] = [];
+
+  if (typeof props.state === 'string' && props.state.trim()) {
+    states.push(props.state.trim());
+  }
+
+  if (Array.isArray(props.states)) {
+    props.states.forEach((state) => {
+      if (typeof state === 'string' && state.trim() && !states.includes(state.trim())) {
+        states.push(state.trim());
+      }
+    });
+  }
+
+  return states;
+}
+
+export function buildResponsiveGridClasses(prefix: string, gridColumns: unknown): string {
+  if (!gridColumns || typeof gridColumns !== 'object') {
+    return '';
+  }
+
+  const classes: string[] = [];
+  Object.entries(gridColumns as Record<string, unknown>).forEach(([breakpoint, columns]) => {
+    if (typeof columns === 'number' && columns > 0) {
+      classes.push(`${prefix}grid-${breakpoint}-${columns}`);
+    }
+  });
 
   return classes.join(' ');
+}
+
+function shouldSkipPrefixedClass(baseClass: string, className: string): boolean {
+  const normalizedClass = className.trim();
+
+  if (baseClass !== 'grid') {
+    return false;
+  }
+
+  return /^grid-\d+$/.test(normalizedClass) || /^(xs|sm|md|lg|xl|2xl):grid-\d+$/.test(normalizedClass);
+}
+
+export function isAnnotationOnlyNode(node: WiremdNode): boolean {
+  if (node.type !== 'container') {
+    return false;
+  }
+
+  const props = 'props' in node ? node.props : undefined;
+  if (!props || typeof props !== 'object') {
+    return false;
+  }
+
+  if (props.annotationRole === 'note') {
+    return true;
+  }
+
+  return Array.isArray(props.classes) && props.classes.includes('annotation-note');
+}
+
+export function buildAnnotationText(props: unknown): string {
+  if (!props || typeof props !== 'object') {
+    return '';
+  }
+
+  const entries: string[] = [];
+  const seen = new Set<string>();
+  const metadata = props as Record<string, unknown>;
+
+  const push = (prefix: string, value: unknown): void => {
+    if (typeof value !== 'string' || !value.trim()) {
+      return;
+    }
+    const text = prefix ? `${prefix}: ${value.trim()}` : value.trim();
+    if (!seen.has(text)) {
+      seen.add(text);
+      entries.push(text);
+    }
+  };
+
+  push('Annotation', metadata.annotation);
+  push('TODO', metadata.todo);
+  push('Version', metadata.versionNote);
+
+  if (Array.isArray(metadata.annotations)) {
+    metadata.annotations.forEach((annotation) => {
+      if (!annotation || typeof annotation !== 'object') {
+        return;
+      }
+
+      const annotationRecord = annotation as Record<string, unknown>;
+      if (typeof annotationRecord.todo === 'string' && annotationRecord.todo.trim()) {
+        push('TODO', annotationRecord.todo);
+      } else if (typeof annotationRecord.version === 'string' && annotationRecord.version.trim()) {
+        push('Version', annotationRecord.version);
+      } else if (typeof annotationRecord.note === 'string' && annotationRecord.note.trim()) {
+        push('Note', annotationRecord.note);
+      } else if (typeof annotationRecord.text === 'string' && annotationRecord.text.trim()) {
+        push('Annotation', annotationRecord.text);
+      }
+    });
+  }
+
+  return entries.join(' | ');
 }
 
 export function escapeHtml(text: string): string {
@@ -278,7 +396,11 @@ export function analyzeFrameworkState(ast: DocumentNode, helpers: RenderHelpers)
               key,
               sourceName: key,
               nodeType: 'input',
-              inputType: typeof node.props.inputType === 'string' ? node.props.inputType : 'text',
+              inputType: typeof node.props.inputType === 'string'
+                ? node.props.inputType
+                : typeof node.props.type === 'string'
+                  ? node.props.type
+                  : 'text',
               initialValue: typeof node.props.value === 'string' ? node.props.value : '',
             });
           }

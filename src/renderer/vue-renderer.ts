@@ -11,9 +11,13 @@ import type {
 import { getStyleCSS } from './styles.js';
 import {
   analyzeFrameworkState,
+  buildAnnotationText,
   buildPrefixedClasses,
+  buildResponsiveGridClasses,
   escapeHtml,
+  getStates,
   getIconGlyph,
+  isAnnotationOnlyNode,
   repeatString,
 } from './plugin-utils.js';
 
@@ -28,6 +32,7 @@ interface VueContext {
   classPrefix: string;
   analysis: ReturnType<typeof analyzeFrameworkState>;
   helpers: RenderHelpers;
+  showAnnotations: boolean;
 }
 
 export function renderVueComponent(
@@ -45,6 +50,7 @@ export function renderVueComponent(
     classPrefix,
     analysis,
     helpers,
+    showAnnotations: Boolean(options.showAnnotations),
   };
 
   const templateContent = ast.children.map((child) => renderVueNode(child, context, 2)).join('\n');
@@ -151,85 +157,128 @@ function renderFrameworkStateObject(fields: ReturnType<typeof analyzeFrameworkSt
 function renderVueNode(node: WiremdNode, context: VueContext, indent: number): string {
   const spaces = repeatString('  ', indent);
 
+  if (isAnnotationOnlyNode(node) && !context.showAnnotations) {
+    return '';
+  }
+
+  let rendered: string;
+
   switch (node.type) {
     case 'button':
-      return renderVueButton(node, context, indent);
+      rendered = renderVueButton(node, context, indent);
+      break;
     case 'input':
-      return renderVueInput(node, context, indent);
+      rendered = renderVueInput(node, context, indent);
+      break;
     case 'textarea':
-      return renderVueTextarea(node, context, indent);
+      rendered = renderVueTextarea(node, context, indent);
+      break;
     case 'select':
-      return renderVueSelect(node, context, indent);
+      rendered = renderVueSelect(node, context, indent);
+      break;
     case 'checkbox':
-      return renderVueCheckbox(node, context, indent);
+      rendered = renderVueCheckbox(node, context, indent);
+      break;
     case 'radio':
-      return renderVueRadio(node, context, indent);
+      rendered = renderVueRadio(node, context, indent);
+      break;
     case 'radio-group':
-      return renderVueWrapper('div', 'radio-group', node.children, node.props, context, indent);
+      rendered = renderVueWrapper('div', 'radio-group', node.children, node.props, context, indent);
+      break;
     case 'icon':
-      return `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'icon', node.props)}" data-icon="${escapeHtml(node.props.name)}" aria-label="${escapeHtml(node.props.name)}">${getIconGlyph(node.props.name)}</span>`;
+      rendered = `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'icon', node.props)}" data-icon="${escapeHtml(node.props.name)}" aria-label="${escapeHtml(node.props.name)}">${getIconGlyph(node.props.name)}</span>`;
+      break;
     case 'container':
-      return renderVueWrapper('div', `container-${node.containerType}`, node.children, node.props, context, indent);
+      rendered = renderVueWrapper('div', `container-${node.containerType}`, node.children, node.props, context, indent);
+      break;
     case 'nav':
-      return renderVueWrapper('nav', 'nav', node.children, node.props, context, indent);
+      rendered = renderVueWrapper('nav', 'nav', node.children, node.props, context, indent);
+      break;
     case 'nav-item':
-      return renderVueNavItem(node, context, indent);
+      rendered = renderVueNavItem(node, context, indent);
+      break;
     case 'brand':
-      return renderVueWrapper('div', 'brand', node.children, node.props, context, indent);
+      rendered = renderVueWrapper('div', 'brand', node.children, node.props, context, indent);
+      break;
     case 'grid':
-      return renderVueGrid(node, context, indent);
+      rendered = renderVueGrid(node, context, indent);
+      break;
     case 'grid-item':
-      return renderVueWrapper('div', 'grid-item', node.children, node.props, context, indent);
+      rendered = renderVueWrapper('div', 'grid-item', node.children, node.props, context, indent);
+      break;
     case 'form':
-      return renderVueForm(node, context, indent);
+      rendered = renderVueForm(node, context, indent);
+      break;
     case 'heading':
-      return renderVueHeading(node, context, indent);
+      rendered = renderVueHeading(node, context, indent);
+      break;
     case 'paragraph':
-      return renderVueParagraph(node, context, indent);
+      rendered = renderVueParagraph(node, context, indent);
+      break;
     case 'text':
-      return `${spaces}${escapeHtml(node.content)}`;
+      rendered = `${spaces}${escapeHtml(node.content)}`;
+      break;
     case 'image':
-      return renderVueImage(node, context, indent);
+      rendered = renderVueImage(node, context, indent);
+      break;
     case 'link':
-      return renderVueLink(node, context, indent);
+      rendered = renderVueLink(node, context, indent);
+      break;
     case 'list':
-      return renderVueList(node, context, indent);
+      rendered = renderVueList(node, context, indent);
+      break;
     case 'list-item':
-      return renderVueListItem(node, context, indent);
+      rendered = renderVueListItem(node, context, indent);
+      break;
     case 'table':
-      return renderVueTable(node, context, indent);
+      rendered = renderVueTable(node, context, indent);
+      break;
     case 'table-header':
-      return renderVueTableHeader(node, context, indent);
+      rendered = renderVueTableHeader(node, context, indent);
+      break;
     case 'table-row':
-      return renderVueTableRow(node, context, indent);
+      rendered = renderVueTableRow(node, context, indent);
+      break;
     case 'table-cell':
-      return renderVueTableCell(node, context, indent);
+      rendered = renderVueTableCell(node, context, indent);
+      break;
     case 'blockquote':
-      return renderVueWrapper('blockquote', 'blockquote', node.children, node.props, context, indent);
+      rendered = renderVueWrapper('blockquote', 'blockquote', node.children, node.props, context, indent);
+      break;
     case 'code':
-      return renderVueCode(node, context, indent);
+      rendered = renderVueCode(node, context, indent);
+      break;
     case 'separator':
-      return `${spaces}<hr class="${buildPrefixedClasses(context.classPrefix, 'separator', node.props)}" />`;
+      rendered = `${spaces}<hr class="${buildPrefixedClasses(context.classPrefix, 'separator', node.props)}" />`;
+      break;
     case 'alert':
-      return renderVueWrapper('div', `state-${node.alertType}`, node.children, node.props, context, indent);
+      rendered = renderVueWrapper('div', `state-${node.alertType}`, node.children, node.props, context, indent);
+      break;
     case 'badge':
-      return `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'badge', node.props)}">${escapeHtml(node.content)}</span>`;
+      rendered = `${spaces}<span class="${buildPrefixedClasses(context.classPrefix, 'badge', node.props)}">${escapeHtml(node.content)}</span>`;
+      break;
     case 'loading-state':
-      return `${spaces}<div class="${buildPrefixedClasses(context.classPrefix, 'loading-state', node.props)}">${escapeHtml(node.message || 'Loading...')}</div>`;
+      rendered = renderVueStateBlock(node.message || 'Loading...', node.children || [], node.props, context, indent, 'clock', 'loading-state');
+      break;
     case 'empty-state':
-      return renderVueStateBlock(node.title || 'Empty state', node.children, node.props, context, indent, node.icon);
+      rendered = renderVueStateBlock(node.title || 'Empty state', node.children, node.props, context, indent, node.icon, 'empty-state');
+      break;
     case 'error-state':
-      return renderVueStateBlock(node.title || 'Error state', node.children, node.props, context, indent, node.icon);
+      rendered = renderVueStateBlock(node.title || 'Error state', node.children, node.props, context, indent, node.icon, 'error-state');
+      break;
     default:
-      return `${spaces}<!-- Unsupported node type: ${(node as { type: string }).type} -->`;
+      rendered = `${spaces}<!-- Unsupported node type: ${(node as { type: string }).type} -->`;
+      break;
   }
+
+  return appendVueAnnotationMarkup(rendered, ('props' in node && node.props) ? node.props : {}, context, indent);
 }
 
 function renderVueButton(node: NodeOf<'button'>, context: VueContext, indent: number): string {
   const spaces = repeatString('  ', indent);
   const classes = buildPrefixedClasses(context.classPrefix, 'button', node.props);
   const buttonType = node.props.type || (node.props.variant === 'primary' ? 'submit' : 'button');
-  const disabled = node.props.state === 'disabled' ? ' disabled' : '';
+  const disabled = (node.props.disabled || getStates(node.props).includes('disabled')) ? ' disabled' : '';
   const clickHandler = buttonType === 'submit' ? '' : ` @click="handleButtonClick('${escapeHtml(node.content || 'button')}')"`;
   const content = node.children
     ? node.children.map((child) => renderVueNode(child, context, 0)).join('')
@@ -243,9 +292,9 @@ function renderVueInput(node: NodeOf<'input'>, context: VueContext, indent: numb
   const classes = buildPrefixedClasses(context.classPrefix, 'input', node.props);
   const field = context.analysis.nodeBindings.get(node) || context.helpers.toIdentifier(node.props.placeholder as string || 'field', 'field');
   const required = node.props.required ? ' required' : '';
-  const disabled = node.props.disabled ? ' disabled' : '';
+  const disabled = (node.props.disabled || getStates(node.props).includes('disabled')) ? ' disabled' : '';
   const placeholder = node.props.placeholder ? ` placeholder="${escapeHtml(node.props.placeholder)}"` : '';
-  const type = node.props.inputType || 'text';
+  const type = node.props.inputType || node.props.type || 'text';
 
   return `${spaces}<input v-model="formState.${field}" type="${type}" class="${classes}"${placeholder}${required}${disabled} />`;
 }
@@ -393,7 +442,8 @@ function renderVueCode(node: NodeOf<'code'>, context: VueContext, indent: number
 
 function renderVueGrid(node: NodeOf<'grid'>, context: VueContext, indent: number): string {
   const spaces = repeatString('  ', indent);
-  const classes = `${buildPrefixedClasses(context.classPrefix, 'grid', node.props)} ${context.classPrefix}grid-${node.columns}`;
+  const responsiveClass = buildResponsiveGridClasses(context.classPrefix, node.props?.responsive?.gridColumns);
+  const classes = `${buildPrefixedClasses(context.classPrefix, 'grid', node.props)} ${context.classPrefix}grid-${node.columns}${responsiveClass ? ` ${responsiveClass}` : ''}`;
   const children = node.children.map((child) => renderVueNode(child, context, indent + 1)).join('\n');
   return `${spaces}<div class="${classes}" style="--grid-columns: ${node.columns}">\n${children}\n${spaces}</div>`;
 }
@@ -417,7 +467,7 @@ function renderVueWrapper(
 ): string {
   const spaces = repeatString('  ', indent);
   const classes = buildPrefixedClasses(context.classPrefix, baseClass, props);
-  const content = children.map((child) => renderVueNode(child, context, indent + 1)).join('\n');
+  const content = children.map((child) => renderVueNode(child, context, indent + 1)).filter(Boolean).join('\n');
   return `${spaces}<${tag} class="${classes}">\n${content}\n${spaces}</${tag}>`;
 }
 
@@ -428,12 +478,32 @@ function renderVueStateBlock(
   context: VueContext,
   indent: number,
   icon?: string,
+  stateKind = 'empty-state',
 ): string {
   const spaces = repeatString('  ', indent);
-  const classes = buildPrefixedClasses(context.classPrefix, 'state-block', props);
-  const content = children.map((child) => renderVueNode(child, context, indent + 1)).join('\n');
+  const classes = `${buildPrefixedClasses(context.classPrefix, 'state-block', props)} ${context.classPrefix}container-${stateKind}`;
+  const content = children.map((child) => renderVueNode(child, context, indent + 1)).filter(Boolean).join('\n');
   const iconMarkup = icon ? `<span data-icon="${escapeHtml(icon)}">${getIconGlyph(icon)}</span>` : '';
   return `${spaces}<div class="${classes}">\n${spaces}  <strong>${iconMarkup}${escapeHtml(title)}</strong>\n${content ? `${content}\n` : ''}${spaces}</div>`;
+}
+
+function appendVueAnnotationMarkup(
+  rendered: string,
+  props: Record<string, unknown>,
+  context: VueContext,
+  indent: number,
+): string {
+  if (!context.showAnnotations) {
+    return rendered;
+  }
+
+  const annotationText = buildAnnotationText(props);
+  if (!annotationText) {
+    return rendered;
+  }
+
+  const spaces = repeatString('  ', indent);
+  return `${rendered}\n${spaces}<aside class="${context.classPrefix}annotation-callout">${escapeHtml(annotationText)}</aside>`;
 }
 
 function renderStateValue(value: string | boolean | string[]): string {

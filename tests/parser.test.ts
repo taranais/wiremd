@@ -6,7 +6,7 @@ describe('Parser', () => {
     it('should parse an empty document', () => {
       const result = parse('');
       expect(result.type).toBe('document');
-      expect(result.version).toBe('0.1');
+      expect(result.version).toBe('0.2');
       expect(result.children).toEqual([]);
     });
 
@@ -594,6 +594,49 @@ Reliable
           state: 'disabled',
         },
       });
+    });
+
+    it('should normalize loading-state message and body content', () => {
+      const result = parse('::: loading-state\n:spinner: Loading...\nPlease wait while we process your request.\n:::');
+
+      expect(result.children[0]).toMatchObject({
+        type: 'loading-state',
+        message: 'Loading...',
+      });
+      expect((result.children[0] as any).children).toEqual([
+        expect.objectContaining({
+          type: 'paragraph',
+          content: 'Please wait while we process your request.',
+        }),
+      ]);
+    });
+
+    it('should normalize empty and error state title/icon metadata', () => {
+      const empty = parse('::: empty-state\n:empty-box:\n## No items found\nGet started by creating your first item\n[Create Item]{.primary}\n:::');
+      const error = parse('::: error-state\n:warning:\n## Something went wrong\nWe could not load this page\n[Retry]{.primary}\n:::');
+
+      expect(empty.children[0]).toMatchObject({
+        type: 'empty-state',
+        icon: 'empty-box',
+        title: 'No items found',
+      });
+      expect(error.children[0]).toMatchObject({
+        type: 'error-state',
+        icon: 'warning',
+        title: 'Something went wrong',
+      });
+    });
+  });
+
+  describe('Position Support', () => {
+    it('should attach source positions when position mode is enabled', () => {
+      const result = parse('## Hero\n[Submit]{:success}', { position: true });
+
+      expect(result.position).toBeDefined();
+      expect(result.position?.start.line).toBe(1);
+      expect(result.children[0].position?.start.line).toBe(1);
+      expect(result.children[1].position?.start.line).toBe(2);
+      expect(result.children[1].position?.end.line).toBe(2);
     });
   });
 

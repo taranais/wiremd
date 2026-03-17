@@ -1,119 +1,76 @@
 # Testing Guide
 
-Wiremd includes comprehensive test coverage for all features, including the live preview functionality.
+Wiremd includes parser, renderer, CLI, conformance, playground, and VS Code extension coverage. The integration gate for merge work is broader than the default root `npm test` command.
 
 ## Test Overview
 
-**Total Tests: 537**
+Current validated baselines:
 
-**Total Test Files: 20**
+- Root suite: 32 files / 635 tests with `WIREMD_TEST_SCOPE=full`
+- Conformance suite: 8 files / 79 tests
+- Playground suite: 8 files / 24 tests
+- VS Code extension suite: 8 files / 64 tests
 
-### Test Files
+Important scope note:
 
-1. **api-examples.test.ts** (26 tests)
-  - API examples coverage
-  - Parsing and rendering expectations
+- `npm test` runs the default focused Vitest scope from `vitest.config.ts`
+- `npm run test:all` runs the full root suite and is the required root gate for merge validation
 
-2. **cli-file-not-found.test.ts** (3 tests)
-  - Missing file handling
-  - Exit behavior
+## Test Surfaces
 
-3. **cli-unit.test.ts** (40 tests)
-  - CLI unit behaviors
-  - Option handling and validation
+- Root suite under `tests/`: parser, validation, renderers, CLI, server, integration, conformance, and API examples
+- Playground suite under `playground/tests/`: browser playground shell, preview, editor, toolbar, splitter, Monaco integration
+- VS Code extension suite under `vscode-extension/tests/`: extension activation, preview provider, language server, TextMate grammar, security coverage
 
-4. **cli.test.ts** (38 tests)
-  - CLI command parsing
-  - File generation
-  - Style and format options
-  - Watch mode
-  - Error handling
-  - Server integration
+### Suite Breakdown
 
-5. **edge-cases.test.ts** (63 tests)
-  - Parser robustness
-  - Nested container regressions
-  - Stress and malformed inputs
-
-6. **error-handling.test.ts** (29 tests)
-  - Error paths
-  - Messaging and resilience
-
-7. **integration.test.ts** (35 tests)
-  - End-to-end live preview flow
-  - CLI and server integration
-  - WebSocket message handling
-  - UI component integration
-  - Feature coverage verification
-
-8. **parser.test.ts** (35 tests)
-   - Markdown parsing
-   - AST transformation
-   - Custom syntax handling
-
-9. **react-renderer.test.ts** (23 tests)
-  - React renderer output
-  - Component mapping
-
-10. **renderer.test.ts** (20 tests)
-   - HTML rendering
-   - Style application
-   - Component rendering
-
-11. **server.test.ts** (31 tests)
-   - Dev server functionality
-   - WebSocket communication
-   - Live-reload injection
-   - Error overlay
-   - Viewport switcher
-   - Connection status
-
-12. **tailwind-renderer.test.ts** (34 tests)
-  - Tailwind-specific rendering
-  - Utility class behavior
-
-13. **type-guards.test.ts** (27 tests)
-  - Runtime type checks
-  - Contract safety
-
-14. **validation.test.ts** (77 tests)
-  - AST validation rules
-  - Error reporting behavior
-
-15. **tests/conformance/01-document-structure.test.ts** (5 tests)
-  - Document contract conformance
-
-16. **tests/conformance/02-components.test.ts** (22 tests)
-  - Component conformance
-  - Ambiguity resolution rules
-
-17. **tests/conformance/03-containers.test.ts** (6 tests)
-  - Container and nesting conformance
-
-18. **tests/conformance/04-layouts.test.ts** (4 tests)
-  - Layout conformance
-
-19. **tests/conformance/05-attributes.test.ts** (10 tests)
-  - Attribute parsing conformance
-
-20. **tests/conformance/06-special-patterns.test.ts** (9 tests)
-  - Special pattern and state conformance
+- `tests/parser.test.ts`, `tests/edge-cases.test.ts`, `tests/error-handling.test.ts`
+  Parser behavior, ambiguity handling, malformed input resilience, and regression coverage
+- `tests/validation.test.ts`, `tests/validation-enhanced.test.ts`
+  AST validation rules and enhanced diagnostics
+- `tests/renderer.test.ts`, `tests/react-renderer.test.ts`, `tests/tailwind-renderer.test.ts`, `tests/angular-renderer.test.ts`, `tests/vue-renderer.test.ts`, `tests/svelte-renderer.test.ts`
+  Renderer semantics and cross-render parity checks
+- `tests/plugins.test.ts`, `tests/plugin-utils.test.ts`, `tests/render-routing.test.ts`, `tests/renderer-branches.test.ts`
+  Plugin registration, routing, helper behavior, and renderer branch coverage
+- `tests/cli-unit.test.ts`, `tests/cli.test.ts`, `tests/cli-file-not-found.test.ts`, `tests/server.test.ts`, `tests/integration.test.ts`
+  CLI behavior, live preview server behavior, and watch/serve integration flow
+- `tests/live-preview-client.test.ts`
+  Injected live-preview client behavior with mocked DOM, WebSocket, and timer control
+- `tests/api-examples.test.ts`, `tests/type-guards.test.ts`
+  API contracts, examples, and runtime type checks
+- `tests/conformance/*.test.ts`
+  Syntax and AST contract coverage against `SYNTAX-SPEC-v0.2.md`
 
 ## Running Tests
 
-### Run all tests
+### Run focused root tests
 ```bash
 npm test
 ```
 
-### Run tests in watch mode
+### Run full root suite
+```bash
+npm run test:all
+```
+
+### Run focused tests in watch mode
 ```bash
 npm run test:watch
 ```
 
-### Run tests with coverage
+### Run full root suite in watch mode
+```bash
+npm run test:all:watch
+```
+
+### Run focused root tests with coverage
 ```bash
 npm run test:coverage
+```
+
+### Run full root suite with coverage
+```bash
+npm run test:all:coverage
 ```
 
 ### Run specific test file
@@ -123,13 +80,36 @@ npm test -- tests/server.test.ts
 
 ### Run conformance suite (spec contract)
 ```bash
-npx vitest run tests/conformance
+WIREMD_TEST_SCOPE=full npx vitest run tests/conformance --config vitest.config.ts
 ```
 
 ### Run one conformance file
 ```bash
-npx vitest run tests/conformance/03-containers.test.ts
+WIREMD_TEST_SCOPE=full npx vitest run tests/conformance/03-containers.test.ts --config vitest.config.ts
 ```
+
+### Run playground suite
+```bash
+npx vitest run --config playground/vitest.config.ts
+```
+
+### Run VS Code extension suite
+```bash
+cd vscode-extension && npm test
+```
+
+## Merge Gate
+
+Use this full gate for merge work and release candidates:
+
+```bash
+npx tsc --noEmit
+npm run test:all
+npx vitest run --config playground/vitest.config.ts
+cd vscode-extension && npm test
+```
+
+This is the documented integration bar for the merged surfaces tracked in `BRANCH-FEATURE-TRACEABILITY.md`.
 
 ## Test Coverage
 
@@ -170,26 +150,18 @@ Tests the command-line interface:
 
 ### Integration Tests (integration.test.ts)
 
-Tests the complete live preview flow:
+Tests the CLI watch/serve integration path:
 
-- ✅ CLI and server function imports
-- ✅ Complete reload flow (file change → regenerate → notify)
-- ✅ Complete error flow (file change → error → notify error)
-- ✅ WebSocket message formatting
-- ✅ Client-side message handling
-- ✅ UI component injection order
-- ✅ Content wrapping logic
-- ✅ Viewport switcher integration
-- ✅ Connection status updates
-- ✅ Error overlay behavior
-- ✅ TypeScript configuration
-- ✅ Documentation completeness
-- ✅ Package dependencies
-- ✅ Feature coverage verification
+- ✅ Real CLI watch flow with mocked watcher and server seams
+- ✅ Reload flow (file change → regenerate → notify)
+- ✅ Error flow (file change → render failure → notify error)
+- ✅ Tailwind live preview serving
+- ✅ Default HTML output derivation for `--serve`
+- ✅ Rejection of non-HTML preview renderers under `--serve`
 
 ### Conformance Tests (`tests/conformance/`)
 
-Conformance tests validate that parser behavior matches `SYNTAX-SPEC-v0.1.md`, not accidental implementation details.
+Conformance tests validate that parser behavior matches `SYNTAX-SPEC-v0.2.md`, not accidental implementation details.
 
 - ✅ Document contract (`01-document-structure.test.ts`)
 - ✅ Components and ambiguity rules (`02-components.test.ts`)
@@ -197,11 +169,13 @@ Conformance tests validate that parser behavior matches `SYNTAX-SPEC-v0.1.md`, n
 - ✅ Layout semantics (`04-layouts.test.ts`)
 - ✅ Attribute parsing rules (`05-attributes.test.ts`)
 - ✅ Special patterns and states (`06-special-patterns.test.ts`)
+- ✅ Native markdown semantics (`07-native-markdown.test.ts`)
+- ✅ AST contract obligations (`08-ast-contracts.test.ts`)
 
 Use these tests as a release gate for syntax/AST changes:
 
 ```bash
-npx vitest run tests/conformance
+WIREMD_TEST_SCOPE=full npx vitest run tests/conformance --config vitest.config.ts
 ```
 
 ## Test Structure
@@ -283,14 +257,17 @@ Tests run automatically on:
 
 ```yaml
 # Example GitHub Actions workflow
-- name: Run tests
-  run: npm test
+- name: Type check
+  run: npx tsc --noEmit
 
-- name: Run conformance
-  run: npx vitest run tests/conformance
+- name: Run full root suite
+  run: npm run test:all
 
-- name: Upload coverage
-  run: npm run test:coverage
+- name: Run playground suite
+  run: npx vitest run --config playground/vitest.config.ts
+
+- name: Run VS Code extension suite
+  run: cd vscode-extension && npm test
 ```
 
 ## Coverage Goals
@@ -332,14 +309,14 @@ it('should generate output', () => {
 });
 ```
 
-### Testing Source Code
+### Testing Served Or Generated Output
 
-For features that inject code, test the source:
+Prefer behavioral verification of runtime output over source inspection:
 
 ```typescript
-it('should include feature code', () => {
-  const source = readFileSync('./src/file.ts', 'utf-8');
-  expect(source).toContain('featureCode');
+it('should inject live preview UI into served HTML', async () => {
+  const html = await fetchInjectedHtml(outputPath);
+  expect(html).toContain('wiremd-toolbar');
 });
 ```
 
@@ -437,4 +414,4 @@ When adding features:
 
 ---
 
-**All tests passing!** ✅ 537/537
+Current validated baseline for the root suite: `32 files / 635 tests` with `WIREMD_TEST_SCOPE=full`.

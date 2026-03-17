@@ -9,10 +9,10 @@
 
 import type { Root as MdastRoot } from 'mdast';
 import {
-  COMPONENT_STATES,
   type AnnotationMetadata,
   type BreakpointName,
   DocumentNode,
+  type Location,
   WiremdNode,
   ParseOptions,
   DocumentMeta,
@@ -21,7 +21,6 @@ import {
 import { SYNTAX_VERSION } from '../constants.js';
 
 const BREAKPOINT_NAMES: BreakpointName[] = ['xs', 'sm', 'md', 'lg', 'xl', '2xl'];
-const COMPONENT_STATE_SET = new Set<string>(COMPONENT_STATES);
 
 /**
  * Transform MDAST to wiremd AST
@@ -124,12 +123,12 @@ export function transformToWiremdAST(
         }
 
         // Create grid node
-        const gridNode = attachCommentAnnotationsToNode({
+        const gridNode = attachNodePosition(attachCommentAnnotationsToNode({
           type: 'grid',
           columns,
           props: (headingTransformed as any).props || {},
           children: gridItems,
-        }, nodeComments);
+        }, nodeComments), node, options);
 
         children.push(gridNode);
 
@@ -149,22 +148,7 @@ export function transformToWiremdAST(
       ) {
         const attrs = parseAttributes(transformed.content.trim());
         const previous = children[children.length - 1] as any;
-        previous.props = previous.props || {};
-        previous.props.classes = previous.props.classes || [];
-
-        if (Array.isArray(attrs.classes)) {
-          for (const cls of attrs.classes) {
-            if (!previous.props.classes.includes(cls)) {
-              previous.props.classes.push(cls);
-            }
-          }
-        }
-
-        for (const [key, value] of Object.entries(attrs)) {
-          if (key !== 'classes') {
-            previous.props[key] = value;
-          }
-        }
+        mergeAttributesIntoNode(previous, attrs);
 
         if (nodeComments.length > 0) {
           addDocumentComments(meta, nodeComments);
@@ -205,6 +189,7 @@ export function transformToWiremdAST(
     version: SYNTAX_VERSION,
     meta,
     children,
+    position: getNodePosition(mdast, options),
   };
 }
 
@@ -218,22 +203,22 @@ function transformNode(
 ): WiremdNode | null {
   switch (node.type) {
     case 'wiremdContainer':
-      return transformContainer(node, options);
+      return attachNodePosition(transformContainer(node, options), node, options);
 
     case 'wiremdInlineContainer':
-      return transformInlineContainer(node, options);
+      return attachNodePosition(transformInlineContainer(node, options), node, options);
 
     case 'heading':
-      return transformHeading(node, options);
+      return attachNodePosition(transformHeading(node, options), node, options);
 
     case 'paragraph':
-      return transformParagraph(node, options, nextNode);
+      return attachNodePosition(transformParagraph(node, options, nextNode), node, options);
 
     case 'text':
-      return {
+      return attachNodePosition({
         type: 'text',
         content: node.value,
-      };
+      }, node, options);
 
     case 'list':
       return transformList(node, options);
@@ -248,52 +233,52 @@ function transformNode(
       return transformBlockquote(node, options);
 
     case 'code':
-      return {
+      return attachNodePosition({
         type: 'code',
         value: node.value,
         lang: node.lang || undefined,
         inline: false,
-      };
+      }, node, options);
 
     case 'inlineCode':
-      return {
+      return attachNodePosition({
         type: 'code',
         value: node.value,
         inline: true,
-      };
+      }, node, options);
 
     case 'image':
-      return {
+      return attachNodePosition({
         type: 'image',
         src: node.url || '',
         alt: node.alt || '',
         props: {},
-      };
+      }, node, options);
 
     case 'link':
-      return {
+      return attachNodePosition({
         type: 'link',
         href: node.url || '#',
         title: node.title,
         children: node.children?.map((child: any) => transformNode(child, options)).filter(Boolean) || [],
         props: {},
-      };
+      }, node, options);
 
     case 'thematicBreak':
-      return {
+      return attachNodePosition({
         type: 'separator',
         props: {},
-      };
+      }, node, options);
 
     case 'html':
       if (isHtmlComment(node.value)) {
         return null;
       }
-      return {
+      return attachNodePosition({
         type: 'text',
         content: String(node.value || ''),
         props: {},
-      };
+      }, node, options);
 
     default:
       // Warn about unsupported nodes in development
@@ -308,34 +293,16 @@ function transformNode(
  * Transform container node (:::)
  */
 function transformContainer(node: any, options: ParseOptions): WiremdNode {
-  if (node.containerType === 'loading') {
-    return {
-      type: 'loading-state',
-      props: parseAttributes(node.attributes || ''),
-      children: (node.children || [])
-        .map((child: any) => transformNode(child, options))
-        .filter(Boolean) as any,
-    };
+  if (node.containerType === 'loading' || node.containerType === 'loading-state') {
+    return transformStateContainer(node, options, 'loading-state');
   }
 
   if (node.containerType === 'empty-state') {
-    return {
-      type: 'empty-state',
-      props: parseAttributes(node.attributes || ''),
-      children: (node.children || [])
-        .map((child: any) => transformNode(child, options))
-        .filter(Boolean) as any,
-    };
+    return transformStateContainer(node, options, 'empty-state');
   }
 
   if (node.containerType === 'error-state') {
-    return {
-      type: 'error-state',
-      props: parseAttributes(node.attributes || ''),
-      children: (node.children || [])
-        .map((child: any) => transformNode(child, options))
-        .filter(Boolean) as any,
-    };
+    return transformStateContainer(node, options, 'error-state');
   }
 
   const children: WiremdNode[] = [];
@@ -744,6 +711,8 @@ function transformParagraph(node: any, _options: ParseOptions, nextNode?: any): 
     }
     flushText();
 
+    applyTrailingAttributeBlock(processedChildren);
+
     // If we only have one text child with no buttons, return as paragraph
     if (processedChildren.length === 1 && processedChildren[0].type === 'text') {
       return {
@@ -758,6 +727,10 @@ function transformParagraph(node: any, _options: ParseOptions, nextNode?: any): 
     }
 
     if (processedChildren.length === 1 && processedChildren[0].type === 'code') {
+      return processedChildren[0];
+    }
+
+    if (processedChildren.length === 1) {
       return processedChildren[0];
     }
 
@@ -988,6 +961,35 @@ function transformParagraph(node: any, _options: ParseOptions, nextNode?: any): 
         props: {
           rows: lines.length,
         },
+      };
+    }
+
+    const radioLinePattern = /^\(([•x* ])\)\s+(.+)$/;
+    const allRadioLines = lines.every(line => radioLinePattern.test(line.trim()));
+    if (allRadioLines) {
+      const radios = lines.map((line) => {
+        const match = line.trim().match(radioLinePattern)!;
+        let label = match[2].trim();
+        let props: any = {};
+        const attrMatch = label.match(/^(.+?)(\{[^}]+\})$/);
+
+        if (attrMatch) {
+          label = attrMatch[1].trim();
+          props = parseAttributes(attrMatch[2]);
+        }
+
+        return {
+          type: 'radio',
+          label,
+          selected: match[1] !== ' ',
+          props,
+        };
+      });
+
+      return {
+        type: 'radio-group',
+        props: {},
+        children: radios as any,
       };
     }
 
@@ -1289,10 +1291,10 @@ function transformParagraph(node: any, _options: ParseOptions, nextNode?: any): 
   // Check if this is an input FIRST: [___] or [***] or [Email___]
   // Input must contain at least one underscore or asterisk
   // This matches: [_____], [*****], [Email___], [Name_______], etc.
-  if (/^\[[^\]]*[_*][^\]]*\](?:\s*\{[^}]+\})?$/.test(content)) {
-    const match = content.match(/^\[([^\]]+)\](?:\s*(\{[^}]+\}))?$/);
-    if (match) {
-      const [, pattern, attrs] = match;
+  const singleInputMatch = content.match(/^\[([^\]]+)\](?:\s*(\{.*\}))?$/);
+  if (singleInputMatch && /[_*]/.test(singleInputMatch[1])) {
+    const [, pattern, attrs] = singleInputMatch;
+    if (pattern) {
       const props = parseAttributes(attrs || '');
 
       // Determine input type from pattern
@@ -1775,9 +1777,22 @@ function transformTable(node: any, options: ParseOptions): WiremdNode {
     }
   }
 
+  const props: any = {};
+  const lastChild = children[children.length - 1] as any;
+  if (
+    lastChild?.type === 'table-row' &&
+    Array.isArray(lastChild.children) &&
+    lastChild.children.length === 1 &&
+    typeof lastChild.children[0]?.content === 'string' &&
+    /^\{[^}]+\}$/.test(lastChild.children[0].content.trim())
+  ) {
+    mergeAttributesIntoNode({ props }, parseAttributes(lastChild.children[0].content.trim()));
+    children.pop();
+  }
+
   return {
     type: 'table',
-    props: {},
+    props,
     children,
   };
 }
@@ -1787,6 +1802,7 @@ function transformTable(node: any, options: ParseOptions): WiremdNode {
  */
 function transformBlockquote(node: any, options: ParseOptions): WiremdNode {
   const children: WiremdNode[] = [];
+  const props: any = {};
 
   for (const child of node.children) {
     const transformed = transformNode(child, options);
@@ -1795,10 +1811,55 @@ function transformBlockquote(node: any, options: ParseOptions): WiremdNode {
     }
   }
 
+  const lastChild = children[children.length - 1] as any;
+  if (lastChild?.type === 'paragraph' && typeof lastChild.content === 'string') {
+    const lines = lastChild.content.split('\n');
+    const lastLine = lines[lines.length - 1]?.trim();
+    if (lastLine && /^\{[^}]+\}$/.test(lastLine)) {
+      mergeAttributesIntoNode({ props }, parseAttributes(lastLine));
+      const nextContent = lines.slice(0, -1).join('\n').trim();
+      if (nextContent) {
+        lastChild.content = nextContent;
+      } else {
+        children.pop();
+      }
+    }
+  }
+
   return {
     type: 'blockquote',
-    props: {},
+    props,
     children,
+  };
+}
+
+function transformStateContainer(
+  node: any,
+  options: ParseOptions,
+  kind: 'loading-state' | 'empty-state' | 'error-state',
+): WiremdNode {
+  const props = parseAttributes(node.attributes || '');
+  const children = (node.children || [])
+    .map((child: any) => transformNode(child, options))
+    .filter(Boolean) as WiremdNode[];
+
+  if (kind === 'loading-state') {
+    const normalized = normalizeLoadingStateChildren(children);
+    return {
+      type: 'loading-state',
+      message: normalized.message,
+      props,
+      children: normalized.children as any,
+    };
+  }
+
+  const normalized = normalizeEmptyOrErrorStateChildren(children, kind);
+  return {
+    type: kind,
+    icon: normalized.icon,
+    title: normalized.title,
+    props,
+    children: normalized.children as any,
   };
 }
 
@@ -1832,6 +1893,152 @@ function addPrimaryClass(props: any): void {
   if (!props.classes.includes('primary')) {
     props.classes.push('primary');
   }
+}
+
+function getNodePosition(node: any, options: ParseOptions): Location | undefined {
+  if (!options.position) {
+    return undefined;
+  }
+
+  if (!node?.position?.start || !node?.position?.end) {
+    const childPositions = Array.isArray(node?.children)
+      ? node.children
+          .map((child: any) => getNodePosition(child, options))
+          .filter(Boolean) as Location[]
+      : [];
+
+    if (childPositions.length === 0) {
+      return undefined;
+    }
+
+    return {
+      start: childPositions[0].start,
+      end: childPositions[childPositions.length - 1].end,
+    };
+  }
+
+  return {
+    start: {
+      line: node.position.start.line,
+      column: node.position.start.column,
+      offset: node.position.start.offset,
+    },
+    end: {
+      line: node.position.end.line,
+      column: node.position.end.column,
+      offset: node.position.end.offset,
+    },
+  };
+}
+
+function attachNodePosition<T extends WiremdNode | null>(value: T, sourceNode: any, options: ParseOptions): T {
+  if (!value) {
+    return value;
+  }
+
+  const position = getNodePosition(sourceNode, options);
+  if (position) {
+    (value as WiremdNode).position = position;
+  }
+
+  return value;
+}
+
+function applyTrailingAttributeBlock(children: WiremdNode[]): void {
+  if (children.length < 2) {
+    return;
+  }
+
+  const lastChild = children[children.length - 1] as any;
+  const previousChild = children[children.length - 2] as any;
+  if (lastChild?.type !== 'text' || typeof lastChild.content !== 'string') {
+    return;
+  }
+
+  const attrBlock = lastChild.content.trim();
+  if (!/^\{[^}]+\}$/.test(attrBlock)) {
+    return;
+  }
+
+  mergeAttributesIntoNode(previousChild, parseAttributes(attrBlock));
+  children.pop();
+}
+
+function mergeAttributesIntoNode(node: any, attrs: any): void {
+  node.props = node.props || {};
+  node.props.classes = node.props.classes || [];
+
+  if (Array.isArray(attrs.classes)) {
+    for (const cls of attrs.classes) {
+      if (!node.props.classes.includes(cls)) {
+        node.props.classes.push(cls);
+      }
+    }
+  }
+
+  for (const [key, value] of Object.entries(attrs)) {
+    if (key !== 'classes') {
+      node.props[key] = value;
+    }
+  }
+}
+
+function normalizeLoadingStateChildren(children: WiremdNode[]): { message?: string; children: WiremdNode[] } {
+  if (children.length === 0) {
+    return { children };
+  }
+
+  const [firstChild, ...rest] = children;
+  if (firstChild.type !== 'paragraph') {
+    return { children };
+  }
+
+  const paragraphChildren = Array.isArray(firstChild.children) ? firstChild.children : [];
+  const textParts = paragraphChildren
+    .filter((child: any) => child.type === 'text' && typeof child.content === 'string')
+    .map((child: any) => child.content)
+    .join('');
+  const lines = textParts.split('\n').map((line) => line.trim()).filter(Boolean);
+
+  if (lines.length === 0) {
+    return { children };
+  }
+
+  const message = lines[0];
+  const remaining = lines.slice(1).join('\n');
+  const normalizedChildren: WiremdNode[] = [...rest];
+
+  if (remaining) {
+    normalizedChildren.unshift({
+      type: 'paragraph',
+      content: remaining,
+      props: {},
+    });
+  }
+
+  return {
+    message,
+    children: normalizedChildren,
+  };
+}
+
+function normalizeEmptyOrErrorStateChildren(
+  children: WiremdNode[],
+  kind: 'empty-state' | 'error-state',
+): { icon?: string; title?: string; children: WiremdNode[] } {
+  const normalizedChildren = [...children];
+  let title: string | undefined;
+
+  if (normalizedChildren[0]?.type === 'heading' && typeof normalizedChildren[0].content === 'string') {
+    title = normalizedChildren[0].content;
+    normalizedChildren.shift();
+  }
+
+  return {
+    icon: kind === 'empty-state' ? 'empty-box' : 'warning',
+    title,
+    children: normalizedChildren,
+  };
 }
 
 function setInputType(props: any, type: string): void {
@@ -1948,12 +2155,8 @@ function parseAttributes(attrString: string): any {
       continue;
     }
 
-    // Boolean: required, disabled, etc.
-    if (COMPONENT_STATE_SET.has(token)) {
-      addState(props, token);
-    } else {
-      props[token] = true;
-    }
+    // Bare tokens are boolean attributes. States must use :state or state=...
+    props[token] = true;
   }
 
   return normalizeAnnotationProps(props);

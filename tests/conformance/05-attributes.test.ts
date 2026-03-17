@@ -81,6 +81,78 @@ describe('Spec 5: Attributes Syntax', () => {
     });
   });
 
+  describe('5.5 Annotation and Comment Attributes', () => {
+    it('normalizes annotation-style attributes into props.annotations metadata', () => {
+      const ast = parse('## Hero {.annotation="Needs approval" todo="Update copy" version-note="v2"}');
+      const heading = ast.children[0];
+
+      expect(heading.type).toBe('heading');
+      expect(heading.props?.annotations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: 'annotation', text: 'Needs approval' }),
+          expect.objectContaining({ kind: 'todo', todo: 'Update copy' }),
+          expect.objectContaining({ kind: 'version', version: 'v2' }),
+        ]),
+      );
+    });
+
+    it('attaches inline HTML comments to the preceding component as annotations', () => {
+      const button = getFirstNode('[Submit] <!-- Primary CTA -->');
+
+      expect(button.type).toBe('button');
+      expect(button.props?.annotations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            kind: 'comment',
+            text: 'Primary CTA',
+          }),
+        ]),
+      );
+    });
+
+    it('parses ::: note blocks as annotation-oriented section containers', () => {
+      const note = getFirstNode('::: note\nPending final copy from marketing.\n:::');
+
+      expect(note).toMatchObject({
+        type: 'container',
+        containerType: 'section',
+        props: {
+          annotationRole: 'note',
+        },
+      });
+      expect(note.props?.classes).toContain('annotation-note');
+      expect(note.props?.annotations).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ kind: 'note' }),
+        ]),
+      );
+    });
+  });
+
+  describe('5.6 Data Placeholder Syntax', () => {
+    it('preserves supported placeholders in AST text fields', () => {
+      const ast = parse('## Welcome {{user.name}}\n\n{{number:1000-9999}}');
+
+      expect(ast.children[0]).toMatchObject({
+        type: 'heading',
+        content: 'Welcome {{user.name}}',
+      });
+      expect(ast.children[1]).toMatchObject({
+        type: 'paragraph',
+        content: '{{number:1000-9999}}',
+      });
+    });
+
+    it('accepts valid placeholders in strict mode', () => {
+      expect(() => parse('## Welcome {{user.name}}', { strict: true })).not.toThrow();
+    });
+
+    it('rejects invalid placeholder syntax in strict mode', () => {
+      expect(() => parse('## Welcome {{user.phone}}', { strict: true })).toThrow(/Validation failed/);
+      expect(() => parse('## Welcome {{user.name', { strict: true })).toThrow(/Validation failed/);
+    });
+  });
+
   describe('10.4 Attribute Placement', () => {
     it('accepts immediate and space-separated placement', () => {
       const immediate = getFirstInline('[Button]{.cta}');

@@ -303,4 +303,4 @@ wiremd supports **all standard Markdown** syntax:
 - [Complete Syntax Showcase](examples/showcase.md) - Interactive examples and tutorials
 - [Syntax Guide](docs/guide/syntax.md) - User-friendly guide with best practices
 - [FAQ](FAQ.md) - Common questions and troubleshooting
-- [Formal Specification](SYNTAX-SPEC-v0.1.md) - Complete technical specification
+- [Formal Specification](SYNTAX-SPEC-v0.2.md) - Complete technical specification

@@ -230,6 +230,8 @@ Powerful
 
       expect(html).toContain('wmd-grid-md-2');
       expect(html).toContain('wmd-grid-sm-1');
+      expect(html).not.toContain('wmd-md:grid-2');
+      expect(html).not.toContain('wmd-sm:grid-1');
     });
 
     it('should render viewport block classes', () => {
@@ -354,6 +356,32 @@ Email
 
       expect(hiddenHtml).not.toContain('ANNOTATION-NOTE-XYZ');
       expect(visibleHtml).toContain('ANNOTATION-NOTE-XYZ');
+    });
+  });
+
+  describe('State Blocks', () => {
+    it('should render loading, empty, and error state nodes', () => {
+      const ast = parse(`
+::: loading
+Sync in progress
+:::
+
+::: empty-state
+No results
+:::
+
+::: error-state
+Try again later
+:::
+      `.trim());
+      const html = renderToHTML(ast, { style: 'sketch' });
+
+      expect(html).toContain('wmd-container-loading-state');
+      expect(html).toContain('Sync in progress');
+      expect(html).toContain('wmd-container-empty-state');
+      expect(html).toContain('No results');
+      expect(html).toContain('wmd-container-error-state');
+      expect(html).toContain('Try again later');
     });
   });
 
