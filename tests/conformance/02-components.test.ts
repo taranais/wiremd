@@ -1,5 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { parse } from '../../src/parser/index.js';
+import { specCase } from './spec-case.js';
+
+const buttonCase = (title: string, fn: () => void | Promise<void>) => specCase('buttons-and-links', title, fn);
+const inputCase = (title: string, fn: () => void | Promise<void>) => specCase('text-inputs', title, fn);
+const textareaCase = (title: string, fn: () => void | Promise<void>) => specCase('textareas', title, fn);
+const selectCase = (title: string, fn: () => void | Promise<void>) => specCase('selects', title, fn);
+const choiceCase = (title: string, fn: () => void | Promise<void>) => specCase('radios-and-checkboxes', title, fn);
+const iconCase = (title: string, fn: () => void | Promise<void>) => specCase('icons', title, fn);
 
 function getRootNode(markdown: string): any {
   const ast = parse(markdown);
@@ -18,33 +26,33 @@ function getFirstInlineNode(markdown: string): any {
 
 describe('Spec 2: Component Syntax', () => {
   describe('2.1 Buttons', () => {
-    it('parses basic button [Text]', () => {
+    buttonCase('parses basic button [Text]', () => {
       const btn = getFirstInlineNode('[Button Text]');
       expect(btn.type).toBe('button');
       expect(btn.content).toBe('Button Text');
       expect(btn.props).toBeTypeOf('object');
     });
 
-    it('parses primary shorthand [Text]*', () => {
+    buttonCase('parses primary shorthand [Text]*', () => {
       const btn = getFirstInlineNode('[Button Text]*');
       expect(btn.type).toBe('button');
       expect(btn.content).toBe('Button Text');
       expect(btn.props?.classes).toContain('primary');
     });
 
-    it('parses class attribute [Text]{.primary}', () => {
+    buttonCase('parses class attribute [Text]{.primary}', () => {
       const btn = getFirstInlineNode('[Button Text]{.primary}');
       expect(btn.type).toBe('button');
       expect(btn.props?.classes).toContain('primary');
     });
 
-    it('parses state attribute [Text]{:disabled}', () => {
+    buttonCase('parses state attribute [Text]{:disabled}', () => {
       const btn = getFirstInlineNode('[Button Text]{:disabled}');
       expect(btn.type).toBe('button');
       expect(btn.props?.state).toBe('disabled');
     });
 
-    it('treats [Text](url) as link, not button', () => {
+    buttonCase('treats [Text](url) as link, not button', () => {
       const root = getRootNode('[Link Text](http://example.com)');
       const linkNode = root.type === 'link' ? root : root.children?.find((n: any) => n.type === 'link');
 
@@ -54,7 +62,7 @@ describe('Spec 2: Component Syntax', () => {
       expect(linkNode.href).toBe('http://example.com');
     });
 
-    it('treats [Text]{.class}(url) as link, not button', () => {
+    buttonCase('treats [Text]{.class}(url) as link, not button', () => {
       const root = getRootNode('[Link Text]{.cta}(https://example.com)');
       const linkNode = root.type === 'link' ? root : root.children?.find((n: any) => n.type === 'link');
 
@@ -65,33 +73,33 @@ describe('Spec 2: Component Syntax', () => {
   });
 
   describe('2.2 Text Inputs', () => {
-    it('parses basic text input [___]', () => {
+    inputCase('parses basic text input [___]', () => {
       const input = getFirstInlineNode('[___]');
       expect(input.type).toBe('input');
       expect(input.props?.type).toBe('text');
     });
 
-    it('parses placeholder [Email___]', () => {
+    inputCase('parses placeholder [Email___]', () => {
       const input = getFirstInlineNode('[Email___]');
       expect(input.type).toBe('input');
       expect(input.props?.placeholder).toBe('Email');
       expect(input.props?.type).toBe('text');
     });
 
-    it('parses password input [***]', () => {
+    inputCase('parses password input [***]', () => {
       const input = getFirstInlineNode('[***]');
       expect(input.type).toBe('input');
       expect(input.props?.type).toBe('password');
     });
 
-    it('parses input attributes [___]{type:email required}', () => {
+    inputCase('parses input attributes [___]{type:email required}', () => {
       const input = getFirstInlineNode('[___]{type:email required}');
       expect(input.type).toBe('input');
       expect(input.props?.type).toBe('email');
       expect(input.props?.required).toBe(true);
     });
 
-    it('preserves supported input attributes like disabled, value, and pattern', () => {
+    inputCase('preserves supported input attributes like disabled, value, and pattern', () => {
       const input = getFirstInlineNode('[___]{type:email disabled value:"demo" pattern:"alpha"}');
       expect(input.type).toBe('input');
       expect(input.props?.type).toBe('email');
@@ -100,7 +108,7 @@ describe('Spec 2: Component Syntax', () => {
       expect(input.props?.pattern).toBe('alpha');
     });
 
-    it('distinguishes input from code', () => {
+    inputCase('distinguishes input from code', () => {
       const root = getRootNode('`code`');
       const node = root.type === 'code' ? root : root.children?.find((n: any) => n.type === 'code');
       expect(node).toBeDefined();
@@ -108,7 +116,7 @@ describe('Spec 2: Component Syntax', () => {
       expect(node.type).not.toBe('input');
     });
 
-    it('distinguishes [___] from [text] button syntax', () => {
+    inputCase('distinguishes [___] from [text] button syntax', () => {
       const input = getFirstInlineNode('[___]');
       const button = getFirstInlineNode('[text]');
       expect(input.type).toBe('input');
@@ -117,27 +125,27 @@ describe('Spec 2: Component Syntax', () => {
   });
 
   describe('2.3 Textareas', () => {
-    it('parses compact textarea [Message...]{rows:5}', () => {
+    textareaCase('parses compact textarea [Message...]{rows:5}', () => {
       const textarea = getFirstInlineNode('[Message...]{rows:5}');
       expect(textarea.type).toBe('textarea');
       expect(textarea.props?.rows).toBe(5);
       expect(textarea.props?.placeholder).toBe('Message...');
     });
 
-    it('parses visual multiline textarea block', () => {
+    textareaCase('parses visual multiline textarea block', () => {
       const root = getRootNode('[                             ]\n[                             ]\n[                             ]');
       expect(root.type).toBe('textarea');
     });
   });
 
   describe('2.4 Select/Dropdown', () => {
-    it('parses dropdown trigger [Options___v]', () => {
+    selectCase('parses dropdown trigger [Options___v]', () => {
       const select = getFirstInlineNode('[Options___v]');
       expect(select.type).toBe('select');
       expect(select.props?.placeholder).toBe('Options');
     });
 
-    it('uses following list items as options', () => {
+    selectCase('uses following list items as options', () => {
       const root = getRootNode('[Select topic____v]\n- Option 1\n- Option 2\n- Option 3');
       const select = root.type === 'select' ? root : root.children?.find((n: any) => n.type === 'select');
 
@@ -150,28 +158,28 @@ describe('Spec 2: Component Syntax', () => {
   });
 
   describe('2.5 Radio Buttons', () => {
-    it('parses unselected radio ( )', () => {
+    choiceCase('parses unselected radio ( )', () => {
       const radio = getFirstInlineNode('( ) Unselected option');
       expect(radio.type).toBe('radio');
       expect(radio.selected).toBe(false);
       expect(radio.label).toBe('Unselected option');
     });
 
-    it('parses selected radio (•)', () => {
+    choiceCase('parses selected radio (•)', () => {
       const radio = getFirstInlineNode('(•) Selected option');
       expect(radio.type).toBe('radio');
       expect(radio.selected).toBe(true);
       expect(radio.label).toBe('Selected option');
     });
 
-    it('parses selected radio (x)', () => {
+    choiceCase('parses selected radio (x)', () => {
       const radio = getFirstInlineNode('(x) Selected alt');
       expect(radio.type).toBe('radio');
       expect(radio.selected).toBe(true);
       expect(radio.label).toBe('Selected alt');
     });
 
-    it('groups consecutive radio items into a radio-group container', () => {
+    choiceCase('groups consecutive radio items into a radio-group container', () => {
       const group = getRootNode(`( ) Small
 (•) Medium
 ( ) Large`);
@@ -185,7 +193,7 @@ describe('Spec 2: Component Syntax', () => {
   });
 
   describe('2.6 Checkboxes', () => {
-    it('parses markdown task list checkboxes', () => {
+    choiceCase('parses markdown task list checkboxes', () => {
       const root = getRootNode('- [ ] Unchecked\n- [x] Checked');
       expect(root.type).toBe('list');
       expect(root.children[0].type).toBe('checkbox');
@@ -196,13 +204,13 @@ describe('Spec 2: Component Syntax', () => {
   });
 
   describe('2.7 Icons', () => {
-    it('parses single icon :icon-name:', () => {
+    iconCase('parses single icon :icon-name:', () => {
       const icon = getFirstInlineNode(':house:');
       expect(icon.type).toBe('icon');
       expect(icon.props?.name).toBe('house');
     });
 
-    it('parses multiple inline icons', () => {
+    iconCase('parses multiple inline icons', () => {
       const root = getRootNode(':house: :user: :gear: :magnifying-glass:');
       const paragraph = root.type === 'paragraph' ? root : null;
       const iconNames = (paragraph?.children || [])

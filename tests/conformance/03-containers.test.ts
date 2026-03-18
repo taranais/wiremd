@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { parse } from '../../src/parser/index.js';
+import { specCase } from './spec-case.js';
+
+const containerCase = (title: string, fn: () => void | Promise<void>) => specCase('containers', title, fn);
+const navCase = (title: string, fn: () => void | Promise<void>) => specCase('inline-navigation', title, fn);
 
 function getRootNode(markdown: string): any {
   const ast = parse(markdown);
@@ -10,7 +14,7 @@ function getRootNode(markdown: string): any {
 
 describe('Spec 3: Container Syntax', () => {
   describe('3.1 Generic Containers', () => {
-    it('parses ::: hero ... ::: as generic container', () => {
+    containerCase('parses ::: hero ... ::: as generic container', () => {
       const container = getRootNode(`::: hero\nContent\n:::`);
 
       expect(container.type).toBe('container');
@@ -20,7 +24,7 @@ describe('Spec 3: Container Syntax', () => {
       expect(container.children[0].content).toBe('Content');
     });
 
-    it('parses attributes on opening container line', () => {
+    containerCase('parses attributes on opening container line', () => {
       const container = getRootNode(`::: card {.shadow data-role:"panel"}\nContent\n:::`);
 
       expect(container.type).toBe('container');
@@ -29,7 +33,7 @@ describe('Spec 3: Container Syntax', () => {
       expect(container.props?.['data-role']).toBe('panel');
     });
 
-    it('supports nested containers', () => {
+    containerCase('supports nested containers', () => {
       const layout = getRootNode(`::: layout\n::: sidebar\nNav\n:::\n::: main\nBody\n:::\n:::`);
 
       expect(layout.type).toBe('container');
@@ -43,7 +47,7 @@ describe('Spec 3: Container Syntax', () => {
   });
 
   describe('3.2 Compact Inline Containers', () => {
-    it('parses [[ A | B | C ]] into an inline/nav container with 3 items', () => {
+    navCase('parses [[ A | B | C ]] into an inline/nav container with 3 items', () => {
       const nav = getRootNode('[[ A | B | C ]]');
       expect(nav.type).toBe('nav');
       expect(Array.isArray(nav.children)).toBe(true);
@@ -53,7 +57,7 @@ describe('Spec 3: Container Syntax', () => {
       expect(nav.children[2].type).toBe('nav-item');
     });
 
-    it('supports text, icon, and button items in inline container', () => {
+    navCase('supports text, icon, and button items in inline container', () => {
       const nav = getRootNode('[[ :logo: Brand | Home | [Sign In]* ]]{.nav}');
       expect(nav.type).toBe('nav');
 
@@ -64,7 +68,7 @@ describe('Spec 3: Container Syntax', () => {
       expect(nav.props?.classes).toContain('nav');
     });
 
-    it('does not parse malformed inline container [[ A | B ] as valid container', () => {
+    navCase('does not parse malformed inline container [[ A | B ] as valid container', () => {
       const root = getRootNode('[[ A | B ]');
       expect(root.type).not.toBe('nav');
       expect(root.type).not.toBe('container');

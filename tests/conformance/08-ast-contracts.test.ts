@@ -1,8 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { parse } from '../../src/parser/index.js';
+import { specCase } from './spec-case.js';
+
+const navContractCase = (title: string, fn: () => void | Promise<void>) => specCase('inline-navigation', title, fn);
+const astCase = (title: string, fn: () => void | Promise<void>) => specCase('ast-contracts', title, fn);
+const annotationCase = (title: string, fn: () => void | Promise<void>) => specCase('annotations', title, fn);
 
 describe('Spec 7.1, 10.3, 11.2, and 11.4: AST Contract and Ambiguity', () => {
-  it('parses navigation bars as nav structures with brand, nav items, and button children', () => {
+  navContractCase('parses navigation bars as nav structures with brand, nav items, and button children', () => {
     const ast = parse('[[ :logo: Brand | Link 1 | Link 2 | [Buy]* ]]{.nav}');
     const nav = ast.children[0];
 
@@ -21,7 +26,7 @@ describe('Spec 7.1, 10.3, 11.2, and 11.4: AST Contract and Ambiguity', () => {
     });
   });
 
-  it('preserves raw HTML as literal content while ::: remains a wiremd container', () => {
+  astCase('preserves raw HTML as literal content while ::: remains a wiremd container', () => {
     const ast = parse(`<div class="raw">hello</div>
 
 ::: hero
@@ -38,7 +43,7 @@ describe('Spec 7.1, 10.3, 11.2, and 11.4: AST Contract and Ambiguity', () => {
     });
   });
 
-  it('keeps canonical component node fields on representative nodes', () => {
+  astCase('keeps canonical component node fields on representative nodes', () => {
     const ast = parse(`## Hero {.annotation="Needs approval"}
 
 [Submit]{.primary :disabled}
@@ -72,7 +77,7 @@ describe('Spec 7.1, 10.3, 11.2, and 11.4: AST Contract and Ambiguity', () => {
     expect(container.position?.start.line).toBeGreaterThan(0);
   });
 
-  it('preserves responsive and annotation extension metadata in canonical props shape', () => {
+  annotationCase('preserves responsive and annotation extension metadata in canonical props shape', () => {
     const ast = parse(`## Features {.grid-3 .md:grid-2 .sm:grid-1}
 ### One
 Fast

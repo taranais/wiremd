@@ -24,6 +24,12 @@
 Fixes #
 Related to #
 
+## Syntax Guardrail
+
+<!-- Required when syntax-sensitive files change (`src/parser/**`, `src/types.ts`, `SYNTAX-SPEC-v0.2.md`, `tests/conformance/**`, `README.md`, `QUICK-REFERENCE.md`, `docs/guide/syntax.md`, `FAQ.md`, `examples/showcase.md`) -->
+
+syntax-change: false
+
 ## Changes Made
 
 <!-- List the main changes in this PR -->
@@ -118,6 +124,7 @@ Related to #
 - [ ] API documentation updated (JSDoc)
 - [ ] Example files added/updated
 - [ ] Syntax specification updated (if syntax changes)
+- [ ] Syntax manifest updated (`syntax/manifest.json`) when syntax changes
 
 ## Additional Notes
 

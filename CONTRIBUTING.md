@@ -170,6 +170,12 @@ npm run test:watch
 # Conformance suite
 WIREMD_TEST_SCOPE=full npx vitest run tests/conformance --config vitest.config.ts
 
+# Syntax sync guardrail
+npm run syntax:check
+
+# Regenerate managed syntax blocks
+npm run syntax:generate
+
 # Playground suite
 npx vitest run --config playground/vitest.config.ts
 
@@ -186,6 +192,7 @@ For merge work, syntax changes, parser/render changes, or release candidates, us
 ```bash
 npx tsc --noEmit
 npm run test:all
+npm run syntax:check
 npx vitest run --config playground/vitest.config.ts
 cd vscode-extension && npm test
 ```
@@ -245,10 +252,12 @@ Releases are managed by project maintainers following semantic versioning (semve
 
 - Update README.md for user-facing changes
 - Update SYNTAX-SPEC-v0.2.md for current syntax changes and keep `SYNTAX-SPEC-v0.1.md` as the historical baseline
+- Update `syntax/manifest.json` and regenerate managed syntax blocks with `npm run syntax:generate` when syntax behavior, syntax docs, or conformance mappings change
 - Add JSDoc comments for API changes
 - Update examples/ for new features
 - Create docs/ pages for major features
 - Update [BRANCH-FEATURE-TRACEABILITY.md](./BRANCH-FEATURE-TRACEABILITY.md) when merged feature surfaces, owning files, or mandatory validation change
+- Keep syntax changes, conformance updates, and tracked syntax docs in the same PR unless the PR body explicitly declares `syntax-change: false`
 
 ### Documentation Standards
 

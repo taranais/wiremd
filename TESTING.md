@@ -83,6 +83,16 @@ npm test -- tests/server.test.ts
 WIREMD_TEST_SCOPE=full npx vitest run tests/conformance --config vitest.config.ts
 ```
 
+### Run syntax sync guardrail
+```bash
+npm run syntax:check
+```
+
+### Regenerate managed syntax blocks
+```bash
+npm run syntax:generate
+```
+
 ### Run one conformance file
 ```bash
 WIREMD_TEST_SCOPE=full npx vitest run tests/conformance/03-containers.test.ts --config vitest.config.ts
@@ -105,6 +115,7 @@ Use this full gate for merge work and release candidates:
 ```bash
 npx tsc --noEmit
 npm run test:all
+npm run syntax:check
 npx vitest run --config playground/vitest.config.ts
 cd vscode-extension && npm test
 ```

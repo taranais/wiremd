@@ -2,6 +2,36 @@
 
 This guide covers the wiremd syntax for creating UI wireframes. For the complete specification, see [SYNTAX-SPEC-v0.2.md](../../SYNTAX-SPEC-v0.2.md).
 
+<!-- syntax-sync:begin syntax-guide-overview -->
+### Tracked Syntax Inventory
+
+This block is generated from `syntax/manifest.json` and kept in sync with the conformance suites. Run `npm run syntax:generate` after manifest or conformance changes.
+
+| Feature | Status | Spec | Conformance | Canonical Example |
+|---|---|---|---|---|
+| `document-structure` | implemented | 11.1, 11.2 | `01-document-structure.test.ts` | `## Dashboard` |
+| `buttons-and-links` | implemented | 2.1, 10.1 | `02-components.test.ts` | `[Submit]{.primary}` |
+| `text-inputs` | implemented | 2.2, 10.2 | `02-components.test.ts` | `[Email___]{type:email required}` |
+| `textareas` | implemented | 2.3 | `02-components.test.ts` | `[Message...]{rows:5}` |
+| `selects` | implemented | 2.4 | `02-components.test.ts` | `[Select topic___v]` |
+| `radios-and-checkboxes` | implemented | 2.5, 2.6 | `02-components.test.ts` | `(•) Selected option` |
+| `icons` | implemented | 2.7 | `02-components.test.ts` | `:house: :user:` |
+| `containers` | implemented | 3.1 | `03-containers.test.ts` | `::: hero` |
+| `inline-navigation` | implemented | 3.2, 7.1 | `03-containers.test.ts`<br>`08-ast-contracts.test.ts` | `[[ :logo: Brand \| Home \| [Sign In] ]]` |
+| `grid-layouts` | implemented | 4.1 | `04-layouts.test.ts` | `## Features {.grid-3 .md:grid-2 .sm:grid-1}` |
+| `viewport-blocks` | implemented | 4.2 | `04-layouts.test.ts` | `::: mobile` |
+| `sidebar-main-layout` | implemented | 4.3 | `04-layouts.test.ts` | `::: layout {.sidebar-main}` |
+| `attributes` | implemented | 5.1, 5.2, 5.4, 10.4 | `05-attributes.test.ts` | `[Submit]{.primary type:submit}` |
+| `states` | implemented | 5.3, 8.1, 8.2 | `05-attributes.test.ts`<br>`06-special-patterns.test.ts` | `[Submit]{:loading}` |
+| `annotations` | implemented | 5.5, 11.4 | `05-attributes.test.ts`<br>`08-ast-contracts.test.ts` | `[Submit] <!-- Primary CTA -->` |
+| `placeholders` | implemented | 5.6 | `05-attributes.test.ts` | `{{user.name}}` |
+| `special-patterns` | implemented | 7.2, 7.3, 7.4, 8.3, 8.4, 8.5 | `06-special-patterns.test.ts` | `Home > Products > Details` |
+| `native-markdown` | implemented | 6.1, 6.2, 6.3, 6.4, 6.5, 6.6 | `07-native-markdown.test.ts` | `\| Name \| Role \|` |
+| `ast-contracts` | implemented | 10.3, 11.4 | `08-ast-contracts.test.ts` | `<div class="raw">hello</div>` |
+
+> Managed by `scripts/syntax-sync.mjs`. Manual edits inside this block will be overwritten.
+<!-- syntax-sync:end syntax-guide-overview -->
+
 ## Basic Syntax
 
 ### Headings

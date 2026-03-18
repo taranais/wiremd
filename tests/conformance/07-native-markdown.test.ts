@@ -1,5 +1,8 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { parse } from '../../src/parser/index.js';
+import { specCase } from './spec-case.js';
+
+const markdownCase = (title: string, fn: () => void | Promise<void>) => specCase('native-markdown', title, fn);
 
 function getDocument(markdown: string): any {
   const ast = parse(markdown);
@@ -9,7 +12,7 @@ function getDocument(markdown: string): any {
 
 describe('Spec 6: Markdown Native Elements', () => {
   describe('6.1 Headings', () => {
-    it('parses heading levels and heading classes', () => {
+    markdownCase('parses heading levels and heading classes', () => {
       const ast = getDocument(`# Heading 1
 
 ## Heading 2 {.hero}
@@ -38,7 +41,7 @@ describe('Spec 6: Markdown Native Elements', () => {
   });
 
   describe('6.2 Lists', () => {
-    it('parses unordered and ordered lists with stable list semantics', () => {
+    markdownCase('parses unordered and ordered lists with stable list semantics', () => {
       const ast = getDocument(`- Alpha
 - Beta
 
@@ -60,7 +63,7 @@ describe('Spec 6: Markdown Native Elements', () => {
   });
 
   describe('6.3 Tables', () => {
-    it('parses table structure and applies attributes to the table node', () => {
+    markdownCase('parses table structure and applies attributes to the table node', () => {
       const ast = getDocument(`| Name | Role |
 |------|------|
 | Ada | Admin |
@@ -92,7 +95,7 @@ describe('Spec 6: Markdown Native Elements', () => {
   });
 
   describe('6.4 Blockquotes', () => {
-    it('parses blockquotes and applies standalone attributes to the blockquote node', () => {
+    markdownCase('parses blockquotes and applies standalone attributes to the blockquote node', () => {
       const ast = getDocument(`> Quoted or callout text
 > Can be multiple lines
 {.callout}`);
@@ -111,7 +114,7 @@ describe('Spec 6: Markdown Native Elements', () => {
   });
 
   describe('6.5 Horizontal Rules', () => {
-    it('parses thematic breaks as separator nodes', () => {
+    markdownCase('parses thematic breaks as separator nodes', () => {
       const ast = getDocument(`Above
 
 ---
@@ -125,7 +128,7 @@ Below`);
   });
 
   describe('6.6 Images', () => {
-    it('parses images and applies standalone attributes to the image node', () => {
+    markdownCase('parses images and applies standalone attributes to the image node', () => {
       const ast = getDocument(`![Alt text](image.png)
 {.hero-image}`);
 

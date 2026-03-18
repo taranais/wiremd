@@ -1,8 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { parse } from '../../src/parser/index.js';
+import { specCase } from './spec-case.js';
+
+const documentCase = (title: string, fn: () => void | Promise<void>) => specCase('document-structure', title, fn);
 
 describe('Spec 1 & 11: Document Structure Conformance', () => {
-  it('returns a document root node', () => {
+  documentCase('returns a document root node', () => {
     const ast = parse('');
 
     expect(ast.type).toBe('document');
@@ -10,7 +13,7 @@ describe('Spec 1 & 11: Document Structure Conformance', () => {
     expect(ast.version.length).toBeGreaterThan(0);
   });
 
-  it('includes meta object with required baseline fields', () => {
+  documentCase('includes meta object with required baseline fields', () => {
     const ast = parse('# Title');
 
     expect(ast.meta).toBeDefined();
@@ -19,14 +22,14 @@ describe('Spec 1 & 11: Document Structure Conformance', () => {
     expect(ast.meta.theme).toBeDefined();
   });
 
-  it('always exposes children as an array', () => {
+  documentCase('always exposes children as an array', () => {
     const ast = parse('Plain paragraph');
 
     expect(Array.isArray(ast.children)).toBe(true);
     expect(ast.children.length).toBeGreaterThan(0);
   });
 
-  it('preserves node shape contract for top-level children', () => {
+  documentCase('preserves node shape contract for top-level children', () => {
     const ast = parse('## Heading\n\n[Button]\n\n[___]');
 
     for (const node of ast.children) {
@@ -36,7 +39,7 @@ describe('Spec 1 & 11: Document Structure Conformance', () => {
     }
   });
 
-  it('supports strict document-level serialization shape', () => {
+  documentCase('supports strict document-level serialization shape', () => {
     const ast = parse('## Header');
 
     const serialized = JSON.parse(JSON.stringify(ast));

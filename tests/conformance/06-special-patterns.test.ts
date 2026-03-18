@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { parse } from '../../src/parser/index.js';
+import { specCase } from './spec-case.js';
+
+const patternCase = (title: string, fn: () => void | Promise<void>) => specCase('special-patterns', title, fn);
+const stateCase = (title: string, fn: () => void | Promise<void>) => specCase('states', title, fn);
 
 function getRoot(markdown: string): any {
   const ast = parse(markdown);
@@ -10,14 +14,14 @@ function getRoot(markdown: string): any {
 
 describe('Spec 7 & 8: Special Patterns & States', () => {
   describe('7.2 Breadcrumbs', () => {
-    it('parses >-separated breadcrumb pattern into breadcrumbs node', () => {
+    patternCase('parses >-separated breadcrumb pattern into breadcrumbs node', () => {
       const node = getRoot('Home > Products > Details');
       expect(node.type).toBe('breadcrumbs');
       expect(Array.isArray(node.children)).toBe(true);
       expect(node.children).toHaveLength(3);
     });
 
-    it('parses breadcrumbs with icons and class marker', () => {
+    patternCase('parses breadcrumbs with icons and class marker', () => {
       const ast = parse(':house: Home > :folder: Products > Category\n{.breadcrumbs}');
       const node = ast.children[0];
       expect(node.type).toBe('breadcrumbs');
@@ -26,7 +30,7 @@ describe('Spec 7 & 8: Special Patterns & States', () => {
   });
 
   describe('7.3 Tabs', () => {
-    it('parses tabs and marks active tab via * suffix', () => {
+    patternCase('parses tabs and marks active tab via * suffix', () => {
       const node = getRoot('[Overview]* | Details | Reviews | FAQ');
       expect(node.type).toBe('tabs');
       expect(Array.isArray(node.children)).toBe(true);
@@ -37,7 +41,7 @@ describe('Spec 7 & 8: Special Patterns & States', () => {
       expect(activeTabs[0].label).toBe('Overview');
     });
 
-    it('associates following content with active tab section', () => {
+    patternCase('associates following content with active tab section', () => {
       const ast = parse('[Overview]* | Details\n\nContent for Overview tab...');
       const tabs = ast.children[0];
       expect(tabs.type).toBe('tabs');
@@ -49,7 +53,7 @@ describe('Spec 7 & 8: Special Patterns & States', () => {
   });
 
   describe('7.4 Badges/Pills', () => {
-    it('parses inline code in badge contexts as badge nodes', () => {
+    patternCase('parses inline code in badge contexts as badge nodes', () => {
       const first = getRoot('Status `active`');
       const second = getRoot('Notifications `3`');
 
@@ -61,7 +65,7 @@ describe('Spec 7 & 8: Special Patterns & States', () => {
   });
 
   describe('8.x Component States', () => {
-    it('parses canonical loading-state container as loading-state node', () => {
+    patternCase('parses canonical loading-state container as loading-state node', () => {
       const node = getRoot('::: loading-state\n:spinner: Loading...\nPlease wait while we process your request.\n:::');
       expect(node.type).toBe('loading-state');
       expect(node.message).toBe('Loading...');
@@ -73,7 +77,7 @@ describe('Spec 7 & 8: Special Patterns & States', () => {
       });
     });
 
-    it('parses empty state container as empty-state node', () => {
+    patternCase('parses empty state container as empty-state node', () => {
       const node = getRoot('::: empty-state\n:empty-box:\n## No items found\nGet started by creating your first item\n[Create Item]{.primary}\n:::');
       expect(node.type).toBe('empty-state');
       expect(node.icon).toBe('empty-box');
@@ -86,7 +90,7 @@ describe('Spec 7 & 8: Special Patterns & States', () => {
       ).toBe(true);
     });
 
-    it('parses error state container as error-state node', () => {
+    patternCase('parses error state container as error-state node', () => {
       const node = getRoot('::: error-state\n:warning:\n## Something went wrong\nWe could not load this page\n[Retry]{.primary}\n:::');
       expect(node.type).toBe('error-state');
       expect(node.icon).toBe('warning');
@@ -99,7 +103,7 @@ describe('Spec 7 & 8: Special Patterns & States', () => {
       ).toBe(true);
     });
 
-    it('parses state attributes on components', () => {
+    stateCase('parses state attributes on components', () => {
       const loadingBtn = getRoot('[Submit]{:loading}');
       const errorBtn = getRoot('[Retry]{:error}');
       const successBtn = getRoot('[Done]{:success}');
@@ -111,7 +115,7 @@ describe('Spec 7 & 8: Special Patterns & States', () => {
       expect(successBtn.props?.state).toBe('success');
     });
 
-    it('preserves multiple component states while keeping the latest state as primary', () => {
+    stateCase('preserves multiple component states while keeping the latest state as primary', () => {
       const button = getRoot('[Submit]{:hover :active :focus :warning}');
 
       expect(button.type).toBe('button');
@@ -119,7 +123,7 @@ describe('Spec 7 & 8: Special Patterns & States', () => {
       expect(button.props?.states).toEqual(['hover', 'active', 'focus', 'warning']);
     });
 
-    it('parses state blocks and applies state to child components', () => {
+    stateCase('parses state blocks and applies state to child components', () => {
       const node = getRoot('::: state=hover\n[Submit]\n:::');
 
       expect(node).toMatchObject({

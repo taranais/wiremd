@@ -1,5 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect } from 'vitest';
 import { parse } from '../../src/parser/index.js';
+import { specCase } from './spec-case.js';
+
+const gridCase = (title: string, fn: () => void | Promise<void>) => specCase('grid-layouts', title, fn);
+const viewportCase = (title: string, fn: () => void | Promise<void>) => specCase('viewport-blocks', title, fn);
+const sidebarCase = (title: string, fn: () => void | Promise<void>) => specCase('sidebar-main-layout', title, fn);
 
 function getDocument(markdown: string): any {
   const ast = parse(markdown);
@@ -9,7 +14,7 @@ function getDocument(markdown: string): any {
 
 describe('Spec 4: Layout Syntax', () => {
   describe('4.1 Grid Layouts', () => {
-    it('maps heading with .grid-3 into a grid structure with 3 grid items', () => {
+    gridCase('maps heading with .grid-3 into a grid structure with 3 grid items', () => {
       const ast = getDocument(`## Features {.grid-3}
 ### Feature 1
 Content 1
@@ -32,7 +37,7 @@ Content 3`);
       }
     });
 
-    it('supports grid-auto class', () => {
+    gridCase('supports grid-auto class', () => {
       const ast = getDocument(`## Cards {.grid-auto}
 ### One
 Text
@@ -43,7 +48,7 @@ Text`);
       expect(grid).toBeDefined();
     });
 
-    it('captures breakpoint-specific responsive grid metadata', () => {
+    gridCase('captures breakpoint-specific responsive grid metadata', () => {
       const ast = getDocument(`## Features {.grid-3 .xs:grid-1 .md:grid-2}
 ### Feature 1
 Content 1
@@ -63,7 +68,7 @@ Content 3`);
   });
 
   describe('4.2 Viewport Blocks', () => {
-    it('parses mobile viewport blocks into responsive visibleIn metadata', () => {
+    viewportCase('parses mobile viewport blocks into responsive visibleIn metadata', () => {
       const ast = getDocument(`::: mobile
 ## Features {.grid-1}
 :::`);
@@ -77,7 +82,7 @@ Content 3`);
       expect(section.props?.classes).toContain('viewport-mobile');
     });
 
-    it('parses desktop viewport blocks into responsive visibleIn metadata', () => {
+    viewportCase('parses desktop viewport blocks into responsive visibleIn metadata', () => {
       const ast = getDocument(`::: desktop
 ## Features {.grid-3}
 :::`);
@@ -89,7 +94,7 @@ Content 3`);
   });
 
   describe('4.3 Sidebar + Main Layout', () => {
-    it('parses layout container with .sidebar-main and sidebar/main child regions', () => {
+    sidebarCase('parses layout container with .sidebar-main and sidebar/main child regions', () => {
       const ast = getDocument(`::: layout {.sidebar-main}
 ## Sidebar {.sidebar}
 Sidebar content
@@ -113,7 +118,7 @@ Main content
       expect(mainHeading).toBeDefined();
     });
 
-    it('does not infer sidebar-main layout when marker class is absent', () => {
+    sidebarCase('does not infer sidebar-main layout when marker class is absent', () => {
       const ast = getDocument(`::: layout
 ## Sidebar {.sidebar}
 Nav

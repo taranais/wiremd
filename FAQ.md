@@ -11,6 +11,36 @@
 - [Layout & Styling](#layout--styling)
 - [Advanced Usage](#advanced-usage)
 
+<!-- syntax-sync:begin faq-overview -->
+### Tracked Syntax Inventory
+
+This block is generated from `syntax/manifest.json` so FAQ syntax status stays aligned with the maintained implementation. Run `npm run syntax:generate` after manifest or conformance changes.
+
+| Feature | Status | Spec | Conformance | Canonical Example |
+|---|---|---|---|---|
+| `document-structure` | implemented | 11.1, 11.2 | `01-document-structure.test.ts` | `## Dashboard` |
+| `buttons-and-links` | implemented | 2.1, 10.1 | `02-components.test.ts` | `[Submit]{.primary}` |
+| `text-inputs` | implemented | 2.2, 10.2 | `02-components.test.ts` | `[Email___]{type:email required}` |
+| `textareas` | implemented | 2.3 | `02-components.test.ts` | `[Message...]{rows:5}` |
+| `selects` | implemented | 2.4 | `02-components.test.ts` | `[Select topic___v]` |
+| `radios-and-checkboxes` | implemented | 2.5, 2.6 | `02-components.test.ts` | `(•) Selected option` |
+| `icons` | implemented | 2.7 | `02-components.test.ts` | `:house: :user:` |
+| `containers` | implemented | 3.1 | `03-containers.test.ts` | `::: hero` |
+| `inline-navigation` | implemented | 3.2, 7.1 | `03-containers.test.ts`<br>`08-ast-contracts.test.ts` | `[[ :logo: Brand \| Home \| [Sign In] ]]` |
+| `grid-layouts` | implemented | 4.1 | `04-layouts.test.ts` | `## Features {.grid-3 .md:grid-2 .sm:grid-1}` |
+| `viewport-blocks` | implemented | 4.2 | `04-layouts.test.ts` | `::: mobile` |
+| `sidebar-main-layout` | implemented | 4.3 | `04-layouts.test.ts` | `::: layout {.sidebar-main}` |
+| `attributes` | implemented | 5.1, 5.2, 5.4, 10.4 | `05-attributes.test.ts` | `[Submit]{.primary type:submit}` |
+| `states` | implemented | 5.3, 8.1, 8.2 | `05-attributes.test.ts`<br>`06-special-patterns.test.ts` | `[Submit]{:loading}` |
+| `annotations` | implemented | 5.5, 11.4 | `05-attributes.test.ts`<br>`08-ast-contracts.test.ts` | `[Submit] <!-- Primary CTA -->` |
+| `placeholders` | implemented | 5.6 | `05-attributes.test.ts` | `{{user.name}}` |
+| `special-patterns` | implemented | 7.2, 7.3, 7.4, 8.3, 8.4, 8.5 | `06-special-patterns.test.ts` | `Home > Products > Details` |
+| `native-markdown` | implemented | 6.1, 6.2, 6.3, 6.4, 6.5, 6.6 | `07-native-markdown.test.ts` | `\| Name \| Role \|` |
+| `ast-contracts` | implemented | 10.3, 11.4 | `08-ast-contracts.test.ts` | `<div class="raw">hello</div>` |
+
+> Managed by `scripts/syntax-sync.mjs`. Manual edits inside this block will be overwritten.
+<!-- syntax-sync:end faq-overview -->
+
 ---
 
 ## Getting Started
@@ -85,7 +115,7 @@ Yes, put text before the underscores:
 [email@example.com_________]{type:email}
 ```
 
-**Note:** This syntax currently renders as a button in some cases - a known limitation being addressed.
+This syntax is implemented in the maintained v0.2 parser and conformance suite.
 
 ### How do I make a primary/highlighted button?
 
@@ -260,10 +290,10 @@ Description
 Use state attributes:
 
 ```markdown
-[Submit]{state:disabled}
-[Processing...]{state:loading}
-[Delete]{state:error}
-[Saved]{state:success}
+[Submit]{:disabled}
+[Processing...]{:loading}
+[Delete]{:error}
+[Saved]{:success}
 ```
 
 ---
@@ -328,13 +358,29 @@ Not currently. Use classes and apply CSS separately, or use the `style:none` opt
 
 ### Can I include one wiremd file in another?
 
-Not in v0.1. Template/partial includes are planned for v0.2+.
+Not yet. Template and partial includes are still outside the maintained v0.2 syntax set.
 
 ### How do I create responsive layouts?
 
-Basic responsive support is included via CSS grid, but explicit breakpoint syntax is planned for v0.2+.
+Responsive syntax is implemented in v0.2.
 
-Currently, grids automatically stack on mobile using CSS media queries.
+Use breakpoint grid classes on the parent heading:
+
+```markdown
+## Features {.grid-3 .md:grid-2 .sm:grid-1}
+```
+
+Use viewport blocks when the content itself should differ by device:
+
+```markdown
+::: mobile
+## Features {.grid-1}
+:::
+
+::: desktop
+## Features {.grid-3}
+:::
+```
 
 ### Can I export to React/Vue/Svelte?
 
@@ -431,17 +477,15 @@ Check the GitHub Discussions page for community support and discussions.
 
 ---
 
-## Known Limitations (v0.1)
+## Known Limitations (v0.2)
 
 These are known issues that will be addressed in future versions:
 
-1. **Placeholder text in inputs** sometimes renders as buttons
-2. **Tabs and accordions** not yet implemented
-3. **File upload inputs** have limited styling
-4. **No template/partial system** for reusable components
-5. **No responsive breakpoint syntax** (relies on CSS)
-6. **No JavaScript interactivity** in rendered output
-7. **Limited framework exports** (only HTML currently)
+1. **Tabs and accordions** are documented as future syntax, not maintained features
+2. **File upload inputs** have limited styling
+3. **No template/partial system** for reusable components
+4. **No JavaScript interactivity** in rendered output
+5. **Framework exports are still uneven** across render targets
 
 See the [roadmap](markdown-mockup-project-plan.md) for planned features.
 

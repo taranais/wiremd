@@ -38,8 +38,63 @@ jobs:
     - name: Run linter
       run: npm run lint
 
-    - name: Run tests
-      run: npm test
+    - name: Run full root suite
+      run: npm run test:all
+
+    - name: Run syntax sync guardrail
+      run: npm run syntax:check
+
+  syntax-guardrail:
+    name: Syntax Guardrail PR Declaration
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Fetch base branch
+      run: git fetch origin ${{ github.base_ref }} --depth=1
+
+    - name: Validate syntax change declaration
+      env:
+        PR_BODY: ${{ github.event.pull_request.body }}
+      run: node scripts/check-pr-syntax-declaration.mjs --base-ref origin/${{ github.base_ref }}
+
+  merge-gate:
+    name: Merge Gate
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run type check
+      run: npm run typecheck
+
+    - name: Run full root suite
+      run: npm run test:all
+
+    - name: Run conformance suite
+      run: WIREMD_TEST_SCOPE=full npx vitest run tests/conformance --config vitest.config.ts
+
+    - name: Run syntax sync guardrail
+      run: npm run syntax:check
+
+    - name: Run playground suite
+      run: npx vitest run --config playground/vitest.config.ts
+
+    - name: Run VS Code extension suite
+      run: cd vscode-extension && npm test
 
   coverage:
     name: Coverage

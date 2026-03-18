@@ -21,6 +21,7 @@ wiremd syntax is designed to be:
 
 ## 2. Component Syntax
 
+<!-- syntax-sync:spec buttons-and-links sections=2.1 -->
 ### 2.1 Buttons
 
 ```markdown
@@ -38,6 +39,7 @@ wiremd syntax is designed to be:
 - Optional `{...}` attributes after closing bracket
 - Distinguishing from links: buttons have no `(url)` following
 
+<!-- syntax-sync:spec text-inputs sections=2.2 -->
 ### 2.2 Text Inputs
 
 ```markdown
@@ -61,6 +63,7 @@ wiremd syntax is designed to be:
 - `value` - Pre-filled value
 - `pattern` - Validation pattern
 
+<!-- syntax-sync:spec textareas sections=2.3 -->
 ### 2.3 Textareas
 
 ```markdown
@@ -80,6 +83,7 @@ wiremd syntax is designed to be:
 - Single line with `{rows:N}` attribute
 - `rows` attribute determines height
 
+<!-- syntax-sync:spec selects sections=2.4 -->
 ### 2.4 Select/Dropdown
 
 ```markdown
@@ -98,6 +102,7 @@ wiremd syntax is designed to be:
 - Following unordered list items (if present) define options
 - List items are children of the select until a non-list-item is encountered
 
+<!-- syntax-sync:spec radios-and-checkboxes sections=2.5 -->
 ### 2.5 Radio Buttons
 
 ```markdown
@@ -112,6 +117,7 @@ wiremd syntax is designed to be:
 - `(•)` or `(x)` = selected
 - Can be in a group (consecutive radio items)
 
+<!-- syntax-sync:spec radios-and-checkboxes sections=2.6 -->
 ### 2.6 Checkboxes
 
 ```markdown
@@ -123,6 +129,7 @@ wiremd syntax is designed to be:
 - Standard markdown task list syntax
 - Native markdown parser handles this
 
+<!-- syntax-sync:spec icons sections=2.7 -->
 ### 2.7 Icons
 
 ```markdown
@@ -147,6 +154,7 @@ wiremd syntax is designed to be:
 
 ## 3. Container Syntax
 
+<!-- syntax-sync:spec containers sections=3.1 -->
 ### 3.1 Generic Containers
 
 ```markdown
@@ -171,6 +179,7 @@ Content goes here
 - `grid` - Grid layout container
 - `layout` - Generic layout container
 
+<!-- syntax-sync:spec inline-navigation sections=3.2 -->
 ### 3.2 Compact Inline Containers
 
 ```markdown
@@ -189,6 +198,7 @@ Content goes here
 
 ## 4. Layout Syntax
 
+<!-- syntax-sync:spec grid-layouts sections=4.1 -->
 ### 4.1 Grid Layouts
 
 ```markdown
@@ -210,6 +220,7 @@ Content
 - Supports: `.grid-2`, `.grid-3`, `.grid-4`, `.grid-auto`
 - Supports breakpoint-specific grid classes: `.xs:grid-N`, `.sm:grid-N`, `.md:grid-N`, `.lg:grid-N`, `.xl:grid-N`, `.2xl:grid-N`
 
+<!-- syntax-sync:spec viewport-blocks sections=4.2 -->
 ### 4.2 Viewport Blocks
 
 ```markdown
@@ -226,6 +237,7 @@ Content
 - `::: mobile|tablet|desktop|laptop` is parsed as a section container with viewport metadata
 - Viewport metadata is stored in `props.responsive.visibleIn`
 
+<!-- syntax-sync:spec sidebar-main-layout sections=4.3 -->
 ### 4.3 Sidebar + Main Layout
 
 ```markdown
@@ -249,6 +261,7 @@ Main content
 
 ## 5. Attributes Syntax
 
+<!-- syntax-sync:spec attributes sections=5.1 -->
 ### 5.1 Class Attributes
 
 ```markdown
@@ -261,6 +274,7 @@ Main content
 - Multiple classes separated by spaces
 - Applied to preceding element
 
+<!-- syntax-sync:spec attributes sections=5.2 -->
 ### 5.2 Key-Value Attributes
 
 ```markdown
@@ -276,6 +290,7 @@ Main content
 - Multiple attributes separated by spaces
 - Values with spaces must be quoted
 
+<!-- syntax-sync:spec states sections=5.3 -->
 ### 5.3 State Attributes
 
 ```markdown
@@ -291,6 +306,7 @@ Main content
 - Multiple states can be combined on one element
 - Parser stores `props.state` (primary/latest) and `props.states` (all states)
 
+<!-- syntax-sync:spec attributes sections=5.4 -->
 ### 5.4 Combined Attributes
 
 ```markdown
@@ -302,6 +318,7 @@ Main content
 - Space-separated
 - Order doesn't matter
 
+<!-- syntax-sync:spec annotations sections=5.5 -->
 ### 5.5 Annotation and Comment Attributes
 
 ```markdown
@@ -318,6 +335,7 @@ Pending final copy from marketing.
 - HTML comments are captured as annotation metadata (not rendered by default in visual outputs)
 - `::: note` blocks are parsed as annotation-oriented section containers
 
+<!-- syntax-sync:spec placeholders sections=5.6 -->
 ### 5.6 Data Placeholder Syntax
 
 ```markdown
@@ -347,6 +365,7 @@ Pending final copy from marketing.
 
 ## 6. Markdown Native Elements
 
+<!-- syntax-sync:spec native-markdown sections=6.1,6.2,6.3,6.4,6.5,6.6 -->
 ### 6.1 Headings
 
 ```markdown
@@ -432,6 +451,7 @@ Pending final copy from marketing.
 
 ## 7. Special Patterns
 
+<!-- syntax-sync:spec inline-navigation sections=7.1 -->
 ### 7.1 Navigation Bars
 
 ```markdown
@@ -444,6 +464,7 @@ Pending final copy from marketing.
 - Buttons (typically at end)
 - Nav class for styling
 
+<!-- syntax-sync:spec special-patterns sections=7.2,7.3,7.4 -->
 ### 7.2 Breadcrumbs
 
 ```markdown
@@ -486,6 +507,7 @@ Notifications `3`
 
 ## 8. State Representation
 
+<!-- syntax-sync:spec states sections=8.1 -->
 ### 8.1 Component States
 
 ```markdown
@@ -499,6 +521,7 @@ Notifications `3`
 [Warning]{:warning}      # Warning state
 ```
 
+<!-- syntax-sync:spec states sections=8.2 -->
 ### 8.2 State Blocks
 
 ```markdown
@@ -507,6 +530,7 @@ Notifications `3`
 :::
 ```
 
+<!-- syntax-sync:spec special-patterns sections=8.3,8.4,8.5 -->
 ### 8.3 Loading States
 
 ```markdown
@@ -572,6 +596,7 @@ We couldn't load this page
 
 ## 10. Parsing Priority and Ambiguity Resolution
 
+<!-- syntax-sync:spec buttons-and-links sections=10.1 -->
 ### 10.1 Button vs. Link
 
 ```markdown
@@ -582,6 +607,7 @@ We couldn't load this page
 
 **Rule:** Presence of `(url)` determines link vs. button
 
+<!-- syntax-sync:spec text-inputs sections=10.2 -->
 ### 10.2 Input vs. Code
 
 ```markdown
@@ -592,6 +618,7 @@ We couldn't load this page
 
 **Rule:** Square brackets with underscore/asterisk patterns = input
 
+<!-- syntax-sync:spec ast-contracts sections=10.3 -->
 ### 10.3 Container vs. HTML
 
 ```markdown
@@ -604,6 +631,7 @@ We couldn't load this page
 
 **Rule:** `:::` syntax is wiremd-specific, HTML is preserved
 
+<!-- syntax-sync:spec attributes sections=10.4 -->
 ### 10.4 Attribute Placement
 
 ```markdown
@@ -618,6 +646,7 @@ We couldn't load this page
 
 ## 11. JSON Output Schema
 
+<!-- syntax-sync:spec document-structure sections=11.1,11.2 -->
 ### 11.1 Document Structure
 
 ```json
@@ -702,6 +731,8 @@ We couldn't load this page
 - `empty-state`
 - `error-state`
 
+<!-- syntax-sync:spec annotations sections=11.4 -->
+<!-- syntax-sync:spec ast-contracts sections=11.4 -->
 ### 11.4 Implemented Extension Metadata (Responsive + Annotations)
 
 ```json

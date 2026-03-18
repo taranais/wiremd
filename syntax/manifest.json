@@ -1,0 +1,315 @@
+[
+  {
+    "id": "document-structure",
+    "title": "Document structure",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["11.1", "11.2"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/01-document-structure.test.ts"],
+    "canonicalExample": "## Dashboard"
+  },
+  {
+    "id": "buttons-and-links",
+    "title": "Buttons and link ambiguity",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["2.1", "10.1"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/02-components.test.ts"],
+    "canonicalExample": "[Submit]{.primary}"
+  },
+  {
+    "id": "text-inputs",
+    "title": "Text inputs and code ambiguity",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["2.2", "10.2"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/02-components.test.ts"],
+    "canonicalExample": "[Email___]{type:email required}"
+  },
+  {
+    "id": "textareas",
+    "title": "Textareas",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["2.3"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/02-components.test.ts"],
+    "canonicalExample": "[Message...]{rows:5}"
+  },
+  {
+    "id": "selects",
+    "title": "Selects and dropdowns",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["2.4"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/02-components.test.ts"],
+    "canonicalExample": "[Select topic___v]"
+  },
+  {
+    "id": "radios-and-checkboxes",
+    "title": "Radios and checkboxes",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["2.5", "2.6"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/02-components.test.ts"],
+    "canonicalExample": "(•) Selected option"
+  },
+  {
+    "id": "icons",
+    "title": "Icons",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["2.7"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/02-components.test.ts"],
+    "canonicalExample": ":house: :user:"
+  },
+  {
+    "id": "containers",
+    "title": "Block containers",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["3.1"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/03-containers.test.ts"],
+    "canonicalExample": "::: hero"
+  },
+  {
+    "id": "inline-navigation",
+    "title": "Inline containers and navigation",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["3.2", "7.1"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": [
+      "tests/conformance/03-containers.test.ts",
+      "tests/conformance/08-ast-contracts.test.ts"
+    ],
+    "canonicalExample": "[[ :logo: Brand | Home | [Sign In] ]]"
+  },
+  {
+    "id": "grid-layouts",
+    "title": "Grid layouts",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["4.1"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/04-layouts.test.ts"],
+    "canonicalExample": "## Features {.grid-3 .md:grid-2 .sm:grid-1}"
+  },
+  {
+    "id": "viewport-blocks",
+    "title": "Viewport blocks",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["4.2"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/04-layouts.test.ts"],
+    "canonicalExample": "::: mobile"
+  },
+  {
+    "id": "sidebar-main-layout",
+    "title": "Sidebar and main layout",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["4.3"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/04-layouts.test.ts"],
+    "canonicalExample": "::: layout {.sidebar-main}"
+  },
+  {
+    "id": "attributes",
+    "title": "Attributes and placement",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["5.1", "5.2", "5.4", "10.4"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/05-attributes.test.ts"],
+    "canonicalExample": "[Submit]{.primary type:submit}"
+  },
+  {
+    "id": "states",
+    "title": "Component states and state blocks",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["5.3", "8.1", "8.2"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": [
+      "tests/conformance/05-attributes.test.ts",
+      "tests/conformance/06-special-patterns.test.ts"
+    ],
+    "canonicalExample": "[Submit]{:loading}"
+  },
+  {
+    "id": "annotations",
+    "title": "Annotations and comments",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["5.5", "11.4"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": [
+      "tests/conformance/05-attributes.test.ts",
+      "tests/conformance/08-ast-contracts.test.ts"
+    ],
+    "canonicalExample": "[Submit] <!-- Primary CTA -->"
+  },
+  {
+    "id": "placeholders",
+    "title": "Data placeholders",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["5.6"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/05-attributes.test.ts"],
+    "canonicalExample": "{{user.name}}"
+  },
+  {
+    "id": "special-patterns",
+    "title": "Special patterns",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["7.2", "7.3", "7.4", "8.3", "8.4", "8.5"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/06-special-patterns.test.ts"],
+    "canonicalExample": "Home > Products > Details"
+  },
+  {
+    "id": "native-markdown",
+    "title": "Native markdown elements",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["6.1", "6.2", "6.3", "6.4", "6.5", "6.6"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/07-native-markdown.test.ts"],
+    "canonicalExample": "| Name | Role |"
+  },
+  {
+    "id": "ast-contracts",
+    "title": "AST contracts and ambiguity",
+    "status": "implemented",
+    "introducedIn": "v0.2",
+    "specSections": ["10.3", "11.4"],
+    "docSurfaces": [
+      "readme-overview",
+      "quick-reference-overview",
+      "syntax-guide-overview",
+      "faq-overview",
+      "showcase-overview"
+    ],
+    "conformanceTargets": ["tests/conformance/08-ast-contracts.test.ts"],
+    "canonicalExample": "<div class=\"raw\">hello</div>"
+  }
+]
